@@ -151,6 +151,11 @@ def quickplot(file,**kwargs):
 
     p = plot3DSlices(data,**kwargs)
     return p
+    
+def parseUnitAndNameFromColumnName(input):
+    reg = re.compile(r'\{(.*?)\}')
+    z = reg.findall(input)
+    return z
 
 def scanplot(file,fig=None,n_index=None,**kwargs):
     #kwargs go into matplotlib/pyplot plot command
@@ -484,26 +489,28 @@ class plot3DSlices:
             def helper_didv(w):
                 w['XX'] = np.diff(w['XX'],axis=1)
                 w['XX'] = w['XX'] / w['ystep']
-                w['cbar_title'] = 'dI/dV ($\mu$Siemens)'
-                return XX
+                w['cbar_quantity'] = 'dI/dV'
+                w['cbar_unit'] = '$\mu$Siemens'
                             
             def helper_log(w):
                 w['XX'] = np.log10(np.abs(w['XX']))
-                w['cbar_title'] = 'log(I) (nA)'
-                return XX
+                w['cbar_trans'] = ['log$_{10}$','abs'] + w['cbar_trans'] 
+                w['cbar_quantity'] = w['cbar_quantity'] 
+                w['cbar_unit'] = w['cbar_unit']
                
             def helper_normal(w):
                 w['XX'] = w['XX']
-                w['cbar_title']  = 'I (nA)'
             
             def helper_abs(w):
                 w['XX'] = np.abs(w['XX'])
-                w['cbar_title'] = 'abs(I (nA))'
+                w['cbar_trans'] = ['abs'] + w['cbar_trans'] 
+                w['cbar_quantity'] = w['cbar_quantity'] 
+                w['cbar_unit'] = w['cbar_unit']
+
             
             def helper_flipaxes(w):
                 w['XX'] = np.transpose( w['XX'])
                 w['ext'] = (w['ext'][2],w['ext'][3],w['ext'][0],w['ext'][1])
-                w['cbar_title'] = 'I (nA)'
                 
             styles = {
                 'deinterlace': helper_deinterlace,
@@ -516,8 +523,13 @@ class plot3DSlices:
                 
                 }
             
+           
+            measAxisDesignation = parseUnitAndNameFromColumnName(self.data.keys()[-1])
             #wrap all needed arguments in a datastructure
-            wrap = {'ext':ext, 'ystep':ystep,'XX': XX, 'cbar_title': cbar_title}
+            cbar_quantity = measAxisDesignation[0]
+            cbar_unit = measAxisDesignation[1]
+            cbar_trans = [] #trascendental tracer :P For keeping track of logs and stuff
+            wrap = {'ext':ext, 'ystep':ystep,'XX': XX, 'cbar_quantity': cbar_quantity, 'cbar_unit': cbar_unit, 'cbar_trans':cbar_trans}
             
             for s in style:
                 try:
@@ -527,9 +539,14 @@ class plot3DSlices:
                     pass
             
             #unwrap
-            ext = wrap['ext']
-            XX = wrap['XX']
-            cbar_title = wrap['cbar_title']
+            w=wrap
+            ext = w['ext']
+            XX = w['XX']
+            cbar_trans_formatted = ''.join([''.join(s+'(') for s in w['cbar_trans']])
+            cbar_title = cbar_trans_formatted + w['cbar_quantity'] + ' (' + w['cbar_unit'] + ')' 
+            if len(w['cbar_trans']) is not 0:
+                cbar_title = cbar_title + ')'
+            
             #postrotate np.rot90
             XX = np.rot90(XX)
             
