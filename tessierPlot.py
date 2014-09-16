@@ -7,7 +7,6 @@
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 #mpl.use('Qt4Agg')
-from scipy import signal
 
 
 from mpl_toolkits.mplot3d import Axes3D
@@ -20,6 +19,7 @@ import math
 
 import re
 
+import tessierStyles as tstyle
 
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
@@ -157,12 +157,15 @@ def parseUnitAndNameFromColumnName(input):
     z = reg.findall(input)
     return z
 
-def scanplot(file,fig=None,n_index=None,**kwargs):
+def scanplot(file,fig=None,n_index=None,style='',data=None,**kwargs):
     #kwargs go into matplotlib/pyplot plot command
     if not fig:
         fig = plt.figure()
     names,skip = parseheader(file)
-    data = loadFile(file,names=names,skiprows=skip)
+    
+    if data is None:
+        print 'loading'
+        data = loadFile(file,names=names,skiprows=skip)
     
     uniques_col = []
 
@@ -197,7 +200,15 @@ def scanplot(file,fig=None,n_index=None,**kwargs):
         title =''
         for i,z in enumerate(uniques_col_str):
             title = '\n'.join([title, '%s: %g (mV)' % (parsedcols[i],getattr(filtereddata,z).iloc[0])])
-        p = plt.plot(filtereddata.iloc[:,-2],filtereddata.iloc[:,-1],label=title,**kwargs)
+            
+        measAxisDesignation = parseUnitAndNameFromColumnName(filtereddata.keys()[-1])
+
+        wrap = tstyle.getEmptyWrap()
+        #put in the last column, the 'measured' value so to say
+        wrap['XX'] = filtereddata.iloc[:,-1]
+        tstyle.processStyle(style,wrap)
+
+        p = plt.plot(filtereddata.iloc[:,-2],wrap['XX'],label=title,**kwargs)
     
     plt.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3,
            ncol=2, mode="expand", borderaxespad=0.)
@@ -411,13 +422,13 @@ class plot3DSlices:
             else:
                 #sorting sorts negative to positive, so beware:
                 #sweep direction determines which part of array should be cut off
-                #z = z[-xu*yu:]
-                #x = x[-xu*yu:]
-                #y = y[-xu*yu:]
+                z = z[-xu*yu:]
+                x = x[-xu*yu:]
+                y = y[-xu*yu:]
 
-                z = z[:xu*yu]
-                x = x[:xu*yu]
-                y = y[:xu*yu]
+#                 z = z[:xu*yu]
+#                 x = x[:xu*yu]
+#                 y = y[:xu*yu]
                                
                 XX = np.reshape(z,(xu,yu))    
                 
@@ -464,8 +475,8 @@ class plot3DSlices:
             if didv: #some backwards compatibility
                style = 'didv'
             
-            if type(style) != set:
-                style = set([style])
+            if type(style) != list:
+                style = list([style])
                 #print style
             
             #smooth the datayesplz
@@ -473,67 +484,19 @@ class plot3DSlices:
             #XX = ndimage.gaussian_filter(XX,sigma=1.0,order=0)
             
             
-            def helper_deinterlace(w):
-                w['deinterXXodd'] = w['XX'][1::2,1:] #take every other column in a sweepback measurement, offset 1
-                w['deinterXXeven'] = w['XX'][::2,:] #offset 0            
-                #w.deinterXXodd  = w.deinterXXodd
-                #w.deinterXXeven = w.deinterXXeven
-                return (deinterXXodd,deinterXXeven)
-              
-            def helper_mov_avg(w):  
-                m, n = 1, 5     # The shape of the window array
-                win = np.ones((m, n))
-                #win = signal.kaiser(m,8.6,sym=False)
-                w['XX'] = moving_average_2d(w['XX'], win)
-                
-            def helper_didv(w):
-                w['XX'] = np.diff(w['XX'],axis=1)
-                w['XX'] = w['XX'] / w['ystep']
-                w['cbar_quantity'] = 'dI/dV'
-                w['cbar_unit'] = '$\mu$Siemens'
-                            
-            def helper_log(w):
-                w['XX'] = np.log10(np.abs(w['XX']))
-                w['cbar_trans'] = ['log$_{10}$','abs'] + w['cbar_trans'] 
-                w['cbar_quantity'] = w['cbar_quantity'] 
-                w['cbar_unit'] = w['cbar_unit']
-               
-            def helper_normal(w):
-                w['XX'] = w['XX']
-            
-            def helper_abs(w):
-                w['XX'] = np.abs(w['XX'])
-                w['cbar_trans'] = ['abs'] + w['cbar_trans'] 
-                w['cbar_quantity'] = w['cbar_quantity'] 
-                w['cbar_unit'] = w['cbar_unit']
-
-            
-            def helper_flipaxes(w):
-                w['XX'] = np.transpose( w['XX'])
-                w['ext'] = (w['ext'][2],w['ext'][3],w['ext'][0],w['ext'][1])
-                
-            styles = {
-                'deinterlace': helper_deinterlace,
-                'didv': helper_didv,
-                'log': helper_log,
-                'normal': helper_normal,
-                'flipaxes': helper_flipaxes,
-                'mov_avg': helper_mov_avg,
-                'abs': helper_abs
-                
-                }
-            
-           
             measAxisDesignation = parseUnitAndNameFromColumnName(self.data.keys()[-1])
             #wrap all needed arguments in a datastructure
             cbar_quantity = measAxisDesignation[0]
             cbar_unit = measAxisDesignation[1]
             cbar_trans = [] #trascendental tracer :P For keeping track of logs and stuff
+
+            wrap = tstyle.getEmptyWrap()
             wrap = {'ext':ext, 'ystep':ystep,'XX': XX, 'cbar_quantity': cbar_quantity, 'cbar_unit': cbar_unit, 'cbar_trans':cbar_trans}
             
             for s in style:
                 try:
-                    styles[s](wrap)
+                    #print s
+                    tstyle.styles[s](wrap)
                 except Exception, e:
                     print 'Style %s does not exist (%s)' % (s,e)
                     pass
@@ -553,11 +516,13 @@ class plot3DSlices:
             if 'deinterlace' in style:
                 plt.figure()
                 ax_deinter_odd  = plt.subplot(2, 1, 1)
-                ax_deinter_odd.imshow(deinterXXodd,extent=ext, cmap=plt.get_cmap(self.ccmap),aspect=aspect,interpolation=interpolation)
+                w['deinterXXodd'] = np.rot90(w['deinterXXodd'])
+                ax_deinter_odd.imshow(w['deinterXXodd'],extent=ext, cmap=plt.get_cmap(self.ccmap),aspect=aspect,interpolation=interpolation)
                 
                 ax_deinter_even = plt.subplot(2, 1, 2)
-                ax_deinter_even.imshow(deinterXXeven,extent=ext, cmap=plt.get_cmap(self.ccmap),aspect=aspect,interpolation=interpolation)
-                
+                w['deinterXXeven'] = np.rot90(w['deinterXXeven'])
+                ax_deinter_even.imshow(w['deinterXXeven'],extent=ext, cmap=plt.get_cmap(self.ccmap),aspect=aspect,interpolation=interpolation)
+
             self.im = ax.imshow(XX,extent=ext, cmap=plt.get_cmap(self.ccmap),aspect=aspect,interpolation=interpolation)
             if clim != (0,0):
                self.im.set_clim(clim)
@@ -609,16 +574,3 @@ class plot3DSlices:
         #plt.show()
   
      
-def moving_average_2d(data, window):
-    """Moving average on two-dimensional data.
-    """
-    # Makes sure that the window function is normalized.
-    window /= window.sum()
-    # Makes sure data array is a numpy array or masked array.
-    if type(data).__name__ not in ['ndarray', 'MaskedArray']:
-        data = np.asarray(data)
-
-    # The output array has the same dimensions as the input data 
-    # (mode='same') and symmetrical boundary conditions are assumed
-    # (boundary='symm').
-    return signal.convolve2d(data, window, mode='same', boundary='symm')
