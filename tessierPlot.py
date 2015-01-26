@@ -344,6 +344,8 @@ class plot3DSlices:
 
 		#n_index determines which plot to plot,
 		# 0 value for plotting all
+		
+		
 
 		print('sorting...')
 		cols = data.columns.tolist()
@@ -352,6 +354,10 @@ class plot3DSlices:
 
 		uniques_col = []
 		self.uniques_per_col=[]
+		
+		
+		sweepdirection = data[cols[-1]][0] > data[cols[-1]][1] #True is sweep neg to pos
+
 
 		uniques_col_str = list(uniques_col_str)
 		for i in uniques_col_str:
@@ -374,7 +380,7 @@ class plot3DSlices:
 		if n_index != None:
 			n_index = np.array(n_index)
 			nplots = len(n_index)
-
+			
 
 		cnt=0
 		#enumerate over the generated list of unique values specified in the uniques columns
@@ -424,13 +430,14 @@ class plot3DSlices:
 			else:
 				#sorting sorts negative to positive, so beware:
 				#sweep direction determines which part of array should be cut off
-				z = z[-xu*yu:]
-				x = x[-xu*yu:]
-				y = y[-xu*yu:]
-
-#                 z = z[:xu*yu]
-#                 x = x[:xu*yu]
-#                 y = y[:xu*yu]
+				if sweepdirection:
+					z = z[-xu*yu:]
+					x = x[-xu*yu:]
+					y = y[-xu*yu:]
+				else:
+					z = z[:xu*yu]
+					x = x[:xu*yu]
+					y = y[:xu*yu]
 
 				XX = np.reshape(z,(xu,yu))
 
@@ -510,7 +517,7 @@ class plot3DSlices:
 			XX = np.rot90(XX)
 
 			if 'deinterlace' in style:
-				plt.figure()
+				self.fig = plt.figure()
 				ax_deinter_odd  = plt.subplot(2, 1, 1)
 				w['deinterXXodd'] = np.rot90(w['deinterXXodd'])
 				ax_deinter_odd.imshow(w['deinterXXodd'],extent=ext, cmap=plt.get_cmap(self.ccmap),aspect=aspect,interpolation=interpolation)
