@@ -20,6 +20,7 @@ import math
 import re
 
 import tessierStyles as tstyle
+from imp import reload #DEBUG
 reload(tstyle) #DEBUG
 
 from mpl_toolkits.axes_grid1 import make_axes_locatable
@@ -45,8 +46,8 @@ class Fiddle:
 		'eclick and erelease are the press and release events'
 		x1, y1 = eclick.xdata, eclick.ydata
 		x2, y2 = erelease.xdata, erelease.ydata
-		print ("(%3.2f, %3.2f) --> (%3.2f, %3.2f)" % (x1, y1, x2, y2))
-		print (" The button you used were: %s %s" % (eclick.button, erelease.button))
+		print("({:3.2f}, {:3.2f}) --> ({:3.2f}, {:3.2f})".format(x1, y1, x2, y2))
+		print(" The button you used were: {:s} {:s}".format(eclick.button, erelease.button))
 
 	def connect(self,event):
 		'(dis-)connect to all the events we need'
@@ -90,7 +91,7 @@ class Fiddle:
 		xpress, ypress = self.press
 		dx = event.xdata - xpress
 		dy = event.ydata - ypress
-		#print 'xp=%f, ypress=%f, event.xdata=%f,event.ydata=%f, dx=%f, dy=%f'%(xpress,ypress,event.xdata, event.ydata,dx, dy)
+		#print('xp={:f}, ypress={:f}, event.xdata={:f},event.ydata={:f}, dx={:f}, dy={:f}'.format(xpress,ypress,event.xdata, event.ydata,dx, dy))
 		#self.rect.set_x(x0+dx)
 		#self.rect.set_y(y0+dy)
 		
@@ -131,9 +132,9 @@ def parseheader(file):
 		for i, line in enumerate(f):
 			if i < 3:
 				continue
-			#print line
+			#print(line)
 			a = colname.findall(line)
-			#print a
+			#print(a)
 			if len(a) >= 1:
 				names.append(a[0])
 			if i > 5:
@@ -142,7 +143,7 @@ def parseheader(file):
 					break
 			if i > 300:
 				break
-	#print names
+	#print(names)
 	return names, skipindex
 
 def quickplot(file,**kwargs):
@@ -165,7 +166,7 @@ def scanplot(file,fig=None,n_index=None,style='',data=None,**kwargs):
 	names,skip = parseheader(file)
 	
 	if data is None:
-		print 'loading'
+		print('loading')
 		data = loadFile(file,names=names,skiprows=skip)
 	
 	uniques_col = []
@@ -200,7 +201,7 @@ def scanplot(file,fig=None,n_index=None,style='',data=None,**kwargs):
 		filtereddata = data.loc[j]
 		title =''
 		for i,z in enumerate(uniques_col_str):
-			title = '\n'.join([title, '%s: %g (mV)' % (parsedcols[i],getattr(filtereddata,z).iloc[0])])
+			title = '\n'.join([title, '{:s}: {:g} (mV)'.format(parsedcols[i],getattr(filtereddata,z).iloc[0])])
 			
 		measAxisDesignation = parseUnitAndNameFromColumnName(filtereddata.keys()[-1])
 
@@ -218,7 +219,7 @@ def scanplot(file,fig=None,n_index=None,style='',data=None,**kwargs):
 	return fig,data    
 		
 def loadFile(file,names=['L','B1','B2','vsd','zz'],skiprows=25):
-	#print 'loading...'
+	#print('loading...')
 	data = pd.read_csv(file, sep='\t', comment='#',skiprows=skiprows,names=names)
 	data.name = file
 	return data
@@ -230,7 +231,7 @@ def loadCustomColormap(file='./cube1.xls'):
 	for i in dfs.keys():
 		r = dfs[i]
 		ls = [r.iloc[:,0],r.iloc[:,1],r.iloc[:,2]]
-		do = zip(*ls)
+		do = list(zip(*ls))
 	
 	ccmap=mpl.colors.LinearSegmentedColormap.from_list('name',do)
 	return ccmap
@@ -274,7 +275,7 @@ def buildLogicals(xs):
 	elif len(xs) == 1:
 		for i in xs[0].unique():
 			if (math.isnan(i)):
-				#print 'NaN found, skipping'
+				#print('NaN found, skipping')
 				continue
 			yield xs[0] == i
 	else:
@@ -296,21 +297,21 @@ class plot3DSlices:
 		for j, i in enumerate(self.exportData):
 			
 			data = i
-			print j
+			print(j)
 			m = self.exportDataMeta[j]
 			
 			sz = np.shape(data)
 			#write
 			try:
-				fid = open('%s%d%s' %(self.data.name,j,'.mtx'),'w+')
-			except Exception, e:
-				print 'Couldnt create file: %s' % e
+				fid = open('{:s}{:d}{:s}'.format(self.data.name, j, '.mtx'),'w+')
+			except Exception as e:
+				print('Couldnt create file: {:s}'.format(str(e)))
 				return
 				
 			#example of first two lines
 			#Units, Data Value at Z = 0.5 ,X, 0.000000e+000, 1.200000e+003,Y, 0.000000e+000, 7.000000e+002,Nothing, 0, 1
 			#850 400 1 8    
-			str1 = 'Units, Name: %s, %s, %f, %f, %s, %f, %f, %s, %f, %f\n' % (
+			str1 = 'Units, Name: {:s}, {:s}, {:f}, {:f}, {:s}, {:f}, {:f}, {:s}, {:f}, {:f}\n'.format(
 				m['datasetname'],
 				m['xname'],
 				m['xlims'][0],
@@ -323,7 +324,7 @@ class plot3DSlices:
 				m['zlims'][1]
 				)
 			floatsize = 8
-			str2 = '%d %d %d %d\n' % (m['xu'],m['yu'],1,floatsize)    
+			str2 = '{:d} {:d} {:d} {:d}\n'.format(m['xu'],m['yu'],1,floatsize)    
 			fid.write(str1)
 			fid.write(str2)
 			#reshaped = np.reshape(data,sz[0]*sz[1],1)
@@ -344,7 +345,7 @@ class plot3DSlices:
 		#n_index determines which plot to plot, 
 		# 0 value for plotting all
 	
-		print 'sorting...'
+		print('sorting...')
 		cols = data.columns.tolist()
 		filterdata = data.sort(cols[:-1])
 		filterdata = filterdata.dropna(how='any')
@@ -393,7 +394,7 @@ class plot3DSlices:
 			
 
 			## if the measurement is not complete this will probably fail so trim of the final sweep?
-			print 'xu: %s, yu: %s, lenz: %s' % (xu,yu,len(z))
+			print('xu: {:d}, yu: {:d}, lenz: {:d}'.format(xu,yu,len(z)))
 			
 			if xu*yu != len(z):
 				xu = (len(z) / yu) #dividing integers so should automatically floor the value
@@ -402,7 +403,7 @@ class plot3DSlices:
 			#or the first since there has been sorting
 			#this doesnt work for e.g. a hilbert measurement
 			
-			print 'xu: %s, yu: %s, lenz: %s' % (xu,yu,len(z))
+			print('xu: {:d}, yu: {:d}, lenz: {:d}'.format(xu,yu,len(z)))
 			if hilbert:
 				
 				Z = np.zeros((xu,yu))
@@ -413,10 +414,10 @@ class plot3DSlices:
 				xv,yv = np.meshgrid(xs,ys,sparse=True)
 				#evaluate all datapoints
 				for i,k in enumerate(xs):
-					print i,k
+					print(i,k)
 					for j,l in enumerate(ys):
 						ind = (k == x) & (l == y)
-						#print z[ind.index[0]]
+						#print(z[ind.index[0]])
 						Z[i,j] = z[ind.index[0]]
 				#keep a z array, index with datapoints from meshgrid+eval
 				XX = Z
@@ -468,7 +469,7 @@ class plot3DSlices:
 				self.exportDataMeta = np.append(self.exportDataMeta,m)
 			except:
 				pass
-			print 'plotting...'
+			print('plotting...')
 
 			ax = plt.subplot(nplots, 1, cnt+1)
 			cbar_title = '' 
@@ -478,7 +479,7 @@ class plot3DSlices:
 			
 			if type(style) != list:
 				style = list([style])
-				#print style
+				#print(style)
 			
 			#smooth the datayesplz
 			#import scipy.ndimage as ndimage
@@ -495,13 +496,6 @@ class plot3DSlices:
 			w2 = {'ext':ext, 'ystep':ystep,'XX': XX, 'cbar_quantity': cbar_quantity, 'cbar_unit': cbar_unit, 'cbar_trans':cbar_trans}
 			for k in w2:
 				w[k] = w2[k]
-			
-			#for s in style:
-			#	try:
-			#		tstyle.styles[s.split('(')[0]](wrap)
-			#	except Exception, e:
-			#		print 'init(): Style %s does not exist (%s)' % (s,e)
-			#		pass
 			tstyle.processStyle(style, w)
 			
 			#unwrap
@@ -539,8 +533,8 @@ class plot3DSlices:
 			
 			title = ''
 			for i in uniques_col_str:                
-				title = '\n'.join([title, '%s: %g (mV)' % (i,getattr(slicy,i).iloc[0])])
-			print title
+				title = '\n'.join([title, '{:s}: {:g} (mV)'.format(i,getattr(slicy,i).iloc[0])])
+			print(title)
 			if 'notitle' not in style:
 				ax.set_title(title)
 			# create an axes on the right side of ax. The width of cax will be 5%

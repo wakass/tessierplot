@@ -174,7 +174,7 @@ def getPopulatedWrap(style=[]):
 					else:
 						w[key] = STYLE_SPECS[s][pnames[i]]
 				i += 1
-		except Exception, e:
+		except Exception as e:
 			print('getPolulatedWrap(): Style {:s} does not exist ({:s})'.format(s, str(e)))
 			pass
 	return w
@@ -182,9 +182,9 @@ def getPopulatedWrap(style=[]):
 def processStyle(style, wrap):
 	for s in style:
 		try:
-			#print s
+			#print(s)
 			STYLE_FUNCS[s.split('(')[0]](wrap)
-		except Exception, e:
+		except Exception as e:
 			print('processStyle(): Style {:s} does not exist ({:s})'.format(s, str(e)))
 			pass
 
