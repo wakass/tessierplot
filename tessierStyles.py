@@ -28,11 +28,11 @@ def nonzeromin(x):
 
 def helper_deinterlace(w):
 	w['deinterXXodd'] = w['XX'][1::2,1:] #take every other column in a sweepback measurement, offset 1
-	w['deinterXXeven'] = w['XX'][::2,:] #offset 0            
+	w['deinterXXeven'] = w['XX'][::2,:] #offset 0
 	#w.deinterXXodd  = w.deinterXXodd
 	#w.deinterXXeven = w.deinterXXeven
-  
-def helper_mov_avg(w):  
+
+def helper_mov_avg(w):
 	(m, n) = (int(w['mov_avg_m']), int(w['mov_avg_n']))     # The shape of the window array
 	win = np.ones((m, n))
 	#win = signal.kaiser(m,8.6,sym=False)
@@ -53,14 +53,14 @@ def helper_didv(w):
 
 def helper_log(w):
 	w['XX'] = np.log10(np.abs(w['XX']))
-	w['cbar_trans'] = ['log$_{10}$','abs'] + w['cbar_trans'] 
-	w['cbar_quantity'] = w['cbar_quantity'] 
+	w['cbar_trans'] = ['log$_{10}$','abs'] + w['cbar_trans']
+	w['cbar_quantity'] = w['cbar_quantity']
 	w['cbar_unit'] = w['cbar_unit']
 
 def helper_logy(w):
 	w['XX'] = np.log10(np.abs(w['XX']))
-	w['cbar_trans'] = ['log$_{10}$','abs'] + w['cbar_trans'] 
-	w['cbar_quantity'] = w['cbar_quantity'] 
+	w['cbar_trans'] = ['log$_{10}$','abs'] + w['cbar_trans']
+	w['cbar_quantity'] = w['cbar_quantity']
 	w['cbar_unit'] = w['cbar_unit']
 
 def helper_fancylog(w):
@@ -84,14 +84,14 @@ def helper_normal(w):
 
 def helper_abs(w):
 	w['XX'] = np.abs(w['XX'])
-	w['cbar_trans'] = ['abs'] + w['cbar_trans'] 
-	w['cbar_quantity'] = w['cbar_quantity'] 
+	w['cbar_trans'] = ['abs'] + w['cbar_trans']
+	w['cbar_quantity'] = w['cbar_quantity']
 	w['cbar_unit'] = w['cbar_unit']
 
 def helper_flipaxes(w):
 	w['XX'] = np.transpose( w['XX'])
 	w['ext'] = (w['ext'][2],w['ext'][3],w['ext'][0],w['ext'][1])
-	
+
 STYLE_FUNCS = {
 	'deinterlace': helper_deinterlace,
 	'didv': helper_didv,
@@ -198,7 +198,7 @@ def moving_average_2d(data, window):
     if type(data).__name__ not in ['ndarray', 'MaskedArray']:
         data = np.asarray(data)
 
-    # The output array has the same dimensions as the input data 
+    # The output array has the same dimensions as the input data
     # (mode='same') and symmetrical boundary conditions are assumed
     # (boundary='symm').
     return signal.convolve2d(data, window, mode='same', boundary='symm')

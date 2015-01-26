@@ -1,7 +1,7 @@
 #tessier.py
 #tools for plotting all kinds of files, with fiddle control etc
 
-# data = loadFile(...) 
+# data = loadFile(...)
 # a = plot3DSlices(data,)
 
 import matplotlib.pyplot as plt
@@ -26,7 +26,7 @@ reload(tstyle) #DEBUG
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 class Fiddle:
-	
+
 	def __init__(self,fig):
 		self.fig = fig
 		self.press = None
@@ -41,7 +41,7 @@ class Fiddle:
 									   minspanx=5, minspany=5,
 									   spancoords='pixels')
 		plt.connect('key_press_event', toggle_selector)
-	
+
 	def line_select_callback(eclick, erelease):
 		'eclick and erelease are the press and release events'
 		x1, y1 = eclick.xdata, eclick.ydata
@@ -71,7 +71,7 @@ class Fiddle:
 		self.fig.canvas.mpl_disconnect(self.cidrelease)
 		self.fig.canvas.mpl_disconnect(self.cidmotion)
 		self.fiddleOn = False
-	
+
 	def on_press(self, event):
 		'on button press we will see if the mouse is over us and store some data'
 
@@ -82,7 +82,7 @@ class Fiddle:
 		a = event.inaxes.images
 		for i in a:
 			self.clim = i.get_clim()
-		
+
 	def on_motion(self, event):
 		'on motion we will move the rect if the mouse is over us'
 		if self.press is None: return
@@ -94,28 +94,28 @@ class Fiddle:
 		#print('xp={:f}, ypress={:f}, event.xdata={:f},event.ydata={:f}, dx={:f}, dy={:f}'.format(xpress,ypress,event.xdata, event.ydata,dx, dy))
 		#self.rect.set_x(x0+dx)
 		#self.rect.set_y(y0+dy)
-		
-		
+
+
 		#dx controls limits width
 		#dy controls limits center
 		a = event.inaxes.images
 
 		for i in a:
 			xmin,xmax,ymin,ymax = i.get_extent()
-			
+
 			vmin,vmax=self.clim
 			xrel=abs(xmin - xmax)
 			yrel=abs(ymin - ymax)
-			
+
 			newvmin = dy/yrel*(vmin-vmax) + vmin + dx/xrel*(vmin-vmax)
 			newvmax = dy/yrel*(vmin-vmax) + vmax - dx/xrel*(vmin-vmax)
-			
+
 			if (newvmax > newvmin):
 				i.set_clim(vmax=newvmax, vmin=newvmin)
-		
-		
-		
-		
+
+
+
+
 		self.fig.canvas.draw()
 
 
@@ -128,7 +128,7 @@ def parseheader(file):
 	skipindex = 0
 	with open(file) as f:
 		colname = re.compile(r'^#.*?name\:{1}(.*?)\r?$')
-		
+
 		for i, line in enumerate(f):
 			if i < 3:
 				continue
@@ -149,11 +149,11 @@ def parseheader(file):
 def quickplot(file,**kwargs):
 	names,skipindex = parseheader(file)
 	data = loadFile(file,names=names,skiprows=skipindex)
-	
+
 
 	p = plot3DSlices(data,**kwargs)
 	return p
-	
+
 def parseUnitAndNameFromColumnName(input):
 	reg = re.compile(r'\{(.*?)\}')
 	z = reg.findall(input)
@@ -164,16 +164,16 @@ def scanplot(file,fig=None,n_index=None,style='',data=None,**kwargs):
 	if not fig:
 		fig = plt.figure()
 	names,skip = parseheader(file)
-	
+
 	if data is None:
 		print('loading')
 		data = loadFile(file,names=names,skiprows=skip)
-	
+
 	uniques_col = []
 
 	#scanplot assumes 2d plots with data in the two last columns
 	uniques_col_str = names[:-2]
-	
+
 	reg = re.compile(r'\{(.*?)\}')
 	parsedcols = []
 	#do some filtering of the colstr to get seperate name and unit of said name
@@ -184,16 +184,16 @@ def scanplot(file,fig=None,n_index=None,style='',data=None,**kwargs):
 		else:
 			parsedcols.append('')
 		#name is first
-		
-		
+
+
 	for i in uniques_col_str:
 		col = getattr(data,i)
 		uniques_col.append(col)
 
 	if n_index != None:
-			n_index = np.array(n_index)        
-			nplots = len(n_index) 
-			
+		n_index = np.array(n_index)
+		nplots = len(n_index)
+
 	for i,j in enumerate(buildLogicals(uniques_col)):
 		if n_index != None:
 				if i not in n_index:
@@ -202,7 +202,7 @@ def scanplot(file,fig=None,n_index=None,style='',data=None,**kwargs):
 		title =''
 		for i,z in enumerate(uniques_col_str):
 			title = '\n'.join([title, '{:s}: {:g} (mV)'.format(parsedcols[i],getattr(filtereddata,z).iloc[0])])
-			
+
 		measAxisDesignation = parseUnitAndNameFromColumnName(filtereddata.keys()[-1])
 
 		wrap = tstyle.getEmptyWrap()
@@ -211,13 +211,13 @@ def scanplot(file,fig=None,n_index=None,style='',data=None,**kwargs):
 		tstyle.processStyle(style,wrap)
 
 		p = plt.plot(filtereddata.iloc[:,-2],wrap['XX'],label=title,**kwargs)
-	
+
 	plt.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3,
 		   ncol=2, mode="expand", borderaxespad=0.)
 	from IPython.core import display
 	#display.display(fig)
-	return fig,data    
-		
+	return fig,data
+
 def loadFile(file,names=['L','B1','B2','vsd','zz'],skiprows=25):
 	#print('loading...')
 	data = pd.read_csv(file, sep='\t', comment='#',skiprows=skiprows,names=names)
@@ -232,10 +232,10 @@ def loadCustomColormap(file='./cube1.xls'):
 		r = dfs[i]
 		ls = [r.iloc[:,0],r.iloc[:,1],r.iloc[:,2]]
 		do = list(zip(*ls))
-	
+
 	ccmap=mpl.colors.LinearSegmentedColormap.from_list('name',do)
 	return ccmap
-	
+
 def demoCustomColormap():
 	ccmap = loadCustomColormap()
 	a = np.linspace(0, 1, 256).reshape(1,-1)
@@ -256,9 +256,9 @@ import math
 
 def buildLogicals(xs):
 #combine the logical uniques of each column into boolean index over those columns
-#infers that each column has 
-#like 
-# 1, 3 
+#infers that each column has
+#like
+# 1, 3
 # 1, 4
 # 1, 5
 # 2, 3
@@ -291,15 +291,15 @@ class plot3DSlices:
 	exportDataMeta =[]
 	def show(self):
 		plt.show()
-	
+
 	def exportToMtx(self):
-		
+
 		for j, i in enumerate(self.exportData):
-			
+
 			data = i
 			print(j)
 			m = self.exportDataMeta[j]
-			
+
 			sz = np.shape(data)
 			#write
 			try:
@@ -307,10 +307,10 @@ class plot3DSlices:
 			except Exception as e:
 				print('Couldnt create file: {:s}'.format(str(e)))
 				return
-				
+
 			#example of first two lines
 			#Units, Data Value at Z = 0.5 ,X, 0.000000e+000, 1.200000e+003,Y, 0.000000e+000, 7.000000e+002,Nothing, 0, 1
-			#850 400 1 8    
+			#850 400 1 8
 			str1 = 'Units, Name: {:s}, {:s}, {:f}, {:f}, {:s}, {:f}, {:f}, {:s}, {:f}, {:f}\n'.format(
 				m['datasetname'],
 				m['xname'],
@@ -324,56 +324,56 @@ class plot3DSlices:
 				m['zlims'][1]
 				)
 			floatsize = 8
-			str2 = '{:d} {:d} {:d} {:d}\n'.format(m['xu'],m['yu'],1,floatsize)    
+			str2 = '{:d} {:d} {:d} {:d}\n'.format(m['xu'],m['yu'],1,floatsize)
 			fid.write(str1)
 			fid.write(str2)
 			#reshaped = np.reshape(data,sz[0]*sz[1],1)
 			data.tofile(fid)
 			fid.close()
-	
 
-	
+
+
 	def __init__(self,data,n_index=None,meshgrid=False,hilbert=False,didv=False,fiddle=True,uniques_col_str=[],style='normal',clim=(0,0),aspect='auto',interpolation='none'):
-		#uniques_col_str, array of names of the columns that are e.g. the slices of the 
+		#uniques_col_str, array of names of the columns that are e.g. the slices of the
 		#style, 'normal,didv,didv2,log'
 		#clim, limits of the colorplot c axis
-		
-		self.exportData =[]       
+
+		self.exportData =[]
 		self.data = data
 		self.uniques_col_str=uniques_col_str
-		
-		#n_index determines which plot to plot, 
+
+		#n_index determines which plot to plot,
 		# 0 value for plotting all
-	
+
 		print('sorting...')
 		cols = data.columns.tolist()
 		filterdata = data.sort(cols[:-1])
 		filterdata = filterdata.dropna(how='any')
-		
+
 		uniques_col = []
 		self.uniques_per_col=[]
-		
+
 		uniques_col_str = list(uniques_col_str)
 		for i in uniques_col_str:
 			col = getattr(filterdata,i)
 			uniques_col.append(col)
 			self.uniques_per_col.append(list(col.unique()))
-	
+
 		self.ccmap = loadCustomColormap()
 
-		
+
 		#fig,axs = plt.subplots(1,1,sharex=True)
 		self.fig = plt.figure()
 		self.fig.subplots_adjust(top=0.96, bottom=0.03, left=0.1, right=0.9,hspace=0.0)
-	
-		
+
+
 		nplots = 1
 		for i in self.uniques_per_col:
 			nplots *= len(i)
-		
+
 		if n_index != None:
-			n_index = np.array(n_index)        
-			nplots = len(n_index) 
+			n_index = np.array(n_index)
+			nplots = len(n_index)
 
 
 		cnt=0
@@ -388,26 +388,26 @@ class plot3DSlices:
 			x=slicy.iloc[:,-3]
 			y=slicy.iloc[:,-2]
 			z=slicy.iloc[:,-1]
-			 
+
 			xu = np.size(x.unique())
 			yu = np.size(y.unique())
-			
+
 
 			## if the measurement is not complete this will probably fail so trim of the final sweep?
 			print('xu: {:d}, yu: {:d}, lenz: {:d}'.format(xu,yu,len(z)))
-			
+
 			if xu*yu != len(z):
 				xu = (len(z) / yu) #dividing integers so should automatically floor the value
-			
+
 			#trim the first part of the sweep, for different min max, better to trim last part?
 			#or the first since there has been sorting
 			#this doesnt work for e.g. a hilbert measurement
-			
+
 			print('xu: {:d}, yu: {:d}, lenz: {:d}'.format(xu,yu,len(z)))
 			if hilbert:
-				
+
 				Z = np.zeros((xu,yu))
-				
+
 				#make a meshgrid for indexing
 				xs = np.linspace(x.min(),x.max(),xu)
 				ys = np.linspace(y.min(),y.max(),yu)
@@ -431,22 +431,22 @@ class plot3DSlices:
 #                 z = z[:xu*yu]
 #                 x = x[:xu*yu]
 #                 y = y[:xu*yu]
-							   
-				XX = np.reshape(z,(xu,yu))    
-				
+
+				XX = np.reshape(z,(xu,yu))
+
 			self.x = x
-			self.y = y 
-			self.z = z   
+			self.y = y
+			self.z = z
 			#now set the lims
 			xlims = (x.min(),x.max())
-			ylims = (y.min(),y.max()) 
-			
+			ylims = (y.min(),y.max())
+
 			#determine stepsize for di/dv, inprincipe only y step is used (ie. the diff is also taken in this direction and the measurement swept..)
 			xstep = (xlims[0] - xlims[1])/xu
 			ystep = (ylims[0] - ylims[1])/yu
 			ext = xlims+ylims
-			
-			
+
+
 #             if meshgrid:
 #                 X, Y = np.meshgrid(xi, yi)
 #                 scipy.interpolate.griddata((xs, ys), Z, X, Y)
@@ -472,20 +472,20 @@ class plot3DSlices:
 			print('plotting...')
 
 			ax = plt.subplot(nplots, 1, cnt+1)
-			cbar_title = '' 
-			
+			cbar_title = ''
+
 			if didv: #some backwards compatibility
 			   style = 'didv'
-			
+
 			if type(style) != list:
 				style = list([style])
 				#print(style)
-			
+
 			#smooth the datayesplz
 			#import scipy.ndimage as ndimage
 			#XX = ndimage.gaussian_filter(XX,sigma=1.0,order=0)
-			
-			
+
+
 			measAxisDesignation = parseUnitAndNameFromColumnName(self.data.keys()[-1])
 			#wrap all needed arguments in a datastructure
 			cbar_quantity = measAxisDesignation[0]
@@ -497,24 +497,24 @@ class plot3DSlices:
 			for k in w2:
 				w[k] = w2[k]
 			tstyle.processStyle(style, w)
-			
+
 			#unwrap
 			ext = w['ext']
 			XX = w['XX']
 			cbar_trans_formatted = ''.join([''.join(s+'(') for s in w['cbar_trans']])
-			cbar_title = cbar_trans_formatted + w['cbar_quantity'] + ' (' + w['cbar_unit'] + ')' 
+			cbar_title = cbar_trans_formatted + w['cbar_quantity'] + ' (' + w['cbar_unit'] + ')'
 			if len(w['cbar_trans']) is not 0:
 				cbar_title = cbar_title + ')'
-			
+
 			#postrotate np.rot90
 			XX = np.rot90(XX)
-			
+
 			if 'deinterlace' in style:
 				plt.figure()
 				ax_deinter_odd  = plt.subplot(2, 1, 1)
 				w['deinterXXodd'] = np.rot90(w['deinterXXodd'])
 				ax_deinter_odd.imshow(w['deinterXXodd'],extent=ext, cmap=plt.get_cmap(self.ccmap),aspect=aspect,interpolation=interpolation)
-				
+
 				ax_deinter_even = plt.subplot(2, 1, 2)
 				w['deinterXXeven'] = np.rot90(w['deinterXXeven'])
 				ax_deinter_even.imshow(w['deinterXXeven'],extent=ext, cmap=plt.get_cmap(self.ccmap),aspect=aspect,interpolation=interpolation)
@@ -522,7 +522,7 @@ class plot3DSlices:
 			self.im = ax.imshow(XX,extent=ext, cmap=plt.get_cmap(self.ccmap),aspect=aspect,interpolation=interpolation, norm=w['imshow_norm'])
 			if clim != (0,0):
 			   self.im.set_clim(clim)
-			   
+
 			if 'flipaxes' in style:
 				ax.set_xlabel(cols[-2])
 				ax.set_ylabel(cols[-3])
@@ -530,9 +530,9 @@ class plot3DSlices:
 				ax.set_xlabel(cols[-3])
 				ax.set_ylabel(cols[-2])
 
-			
+
 			title = ''
-			for i in uniques_col_str:                
+			for i in uniques_col_str:
 				title = '\n'.join([title, '{:s}: {:g} (mV)'.format(i,getattr(slicy,i).iloc[0])])
 			print(title)
 			if 'notitle' not in style:
@@ -541,26 +541,26 @@ class plot3DSlices:
 			# of ax and the padding between cax and ax will be fixed at 0.05 inch.
 			divider = make_axes_locatable(ax)
 			cax = divider.append_axes("right", size="5%", pad=0.05)
-			
-			pos = list(ax.get_position().bounds)            
+
+			pos = list(ax.get_position().bounds)
 
 			self.cbar = plt.colorbar(self.im, cax=cax)
 			cbar = self.cbar
-			
+
 			cbar.set_label(cbar_title)
-			
+
 			cnt+=1 #counter for subplots
 
-		
+
 		from IPython.core import display
 		if mpl.get_backend() == 'Qt4Agg':
 			display.display(self.fig)
-		 
+
 		if fiddle and (mpl.get_backend() == 'Qt4Agg'):
 			self.fiddle = Fiddle(self.fig)
 			axFiddle = plt.axes([0.1, 0.85, 0.15, 0.075])
-			
-			
+
+
 			self.bnext = Button(axFiddle, 'Fiddle')
 			self.bnext.on_clicked(self.fiddle.connect)
 
@@ -568,5 +568,5 @@ class plot3DSlices:
 			self.fig.fiddle = self.fiddle
 			self.fig.bnext = self.bnext
 		#plt.show()
-  
+
 	 
