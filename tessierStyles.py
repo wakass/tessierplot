@@ -64,7 +64,10 @@ def helper_logy(w):
 	w['cbar_unit'] = w['cbar_unit']
 
 def helper_fancylog(w):
-	'''Use a logarithmic normalising function for plotting'''
+	'''
+	Use a logarithmic normalising function for plotting.
+	This might be incompatible with Fiddle.
+	'''
 	w['XX'] = abs(w['XX'])
 	(cmin, cmax) = (w['fancylog_cmin'], w['fancylog_cmax'])
 	if type(cmin) is str:
