@@ -11,13 +11,14 @@ import matplotlib.pyplot as plt
 
 import tessierPlot as ts
 from IPython.display import Image
-from IPython.display import HTML
+from IPython.display import display, HTML
 
 
 
 mainfolder = os.path.normpath('../data/heliox/data/')
 devicename = 'T5_2_NR_Postanneal'
 
+htmlthumbnailpath = './files/thumbnails'
 thumbnailpath = './thumbnails'
 
 htmlout = """<table>
@@ -102,7 +103,7 @@ for root, dirs, files in os.walk(mainfolder):
                 p.sweepfig.savefig(os.path.join(root,'thumbnail.png'))
                 plt.close(p.sweepfig)
                 
-            imagefile = os.path.join(thumbnailpath, thumbnailfile)
+            imagefile = os.path.join(htmlthumbnailpath, thumbnailfile)
             imagefile = imagefile.replace("\\", "/")
             jslabels = "'\\\'" + labellist[0] + "\\\''" + ", '\\\'" + labellist[2] + "\\\''"
             htmlroot = root.replace("\\","/")
@@ -121,14 +122,21 @@ for root, dirs, files in os.walk(mainfolder):
             if not ('thumbnail.png' in files):          
                 names,skiprows = ts.parseheader(path) 
                 data = ts.loadFile(path,names=names,skiprows=skiprows)
-                p = ts.plot3DSlices(data,fiddle=fiddleButton,style=plotstyle,uniques_col_str=[])
-                p.fig.subplots_adjust(top=0.9, bottom=0.15, left=0.2, right=0.85,hspace=0.0)
-                p.fig.get_axes()[0].locator_params(nbins=4)
-                p.fig.savefig(os.path.join('./thumbnails/',thumbnailfile))
-                p.fig.savefig(os.path.join(root,'thumbnail.png'))
-                plt.close(p.fig)
                 
-            imagefile = os.path.join(thumbnailpath, thumbnailfile)
+                # set uniques_col_str to remainder rest of parameters?
+                print names,skiprows
+                try:
+                    p = ts.plot3DSlices(data,fiddle=fiddleButton,style=plotstyle,uniques_col_str=[])
+                
+                    p.fig.subplots_adjust(top=0.9, bottom=0.15, left=0.2, right=0.85,hspace=0.0)
+                    p.fig.get_axes()[0].locator_params(nbins=4)
+                    p.fig.savefig(os.path.join('./thumbnails/',thumbnailfile))
+                    p.fig.savefig(os.path.join(root,'thumbnail.png'))
+                    plt.close(p.fig)
+                except:
+                    pass
+                
+            imagefile = os.path.join(htmlthumbnailpath, thumbnailfile)
             imagefile = imagefile.replace("\\", "/")
             jslabels = "'\\\'" + labellist[0] + "\\\''" + ", '\\\'" + labellist[2] + "\\\'', '\\\'" + labellist[4] + "\\\''"
             htmlroot = root.replace("\\","/")
@@ -222,6 +230,6 @@ pylab.rcParams['xtick.labelsize'] = fontsize_axis_tick_labels
 pylab.rcParams['ytick.labelsize'] = fontsize_axis_tick_labels
 
 #print htmlout
-HTML(htmlout)
+display(HTML(htmlout))
 
 
