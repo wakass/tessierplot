@@ -12,6 +12,7 @@ import re
 from IPython.display import VimeoVideo
 from IPython.display import display, HTML
 
+reload(ts)
 
 _plot_width = 4. # in inch (ffing inches eh)
 _plot_height = 3. # in inch
@@ -32,7 +33,7 @@ class tessierView:
         self._root = rootdir
         self._filemask = filemask
         self._filterstring = filterstring
-        
+        self._allthumbs = []
     def on(self):   
         print 'You are now watching through the glasses of ideology'
         display(VimeoVideo('106036638'))
@@ -62,16 +63,15 @@ class tessierView:
         thumbfile_datadir =  self.getthumbdatapath(file)
         if (os.path.exists(thumbfile) and override) or (not os.path.exists(thumbfile)):
             try:
-                names,skip=ts.parseheader(file)
-                dat = ts.loadFile(file,names,skip)
-                p = ts.quickplot(file,fiddle=False) #make quickplot more intelligent so it detect dimensionality from uniques
+                p = ts.plotR(file)
+                p.quickplot() #make quickplot more intelligent so it detect dimensionality from uniques
                 p.fig.subplots_adjust(top=0.9, bottom=0.15, left=0.15, right=0.85,hspace=0.0)
                 p.fig.savefig(thumbfile)
                 p.fig.savefig(thumbfile_datadir)
                 plt.close(p.fig)
             except Exception,e:
                 thumbfile = None #if fail no thumbfile was created
-                print e
+                print 'Error {:s}'.format(e)
                 pass
         #do nothing if thumb exists
         
@@ -95,20 +95,20 @@ class tessierView:
                     #check for certain parameters with filterstring in the set file: e.g. 'dac4: 1337.0'
                         thumbpath = self.makethumbnail(fullpath)
                         if thumbpath:
-                            self.allthumbs.append({'datapath':fullpath,'thumbpath':thumbpath})
+                            self._allthumbs.append({'datapath':fullpath,'thumbpath':thumbpath})
                             images += 1
                             
-        return self.allthumbs
+        return self._allthumbs
     
     def htmlout(self,refresh=False):
         if refresh:
-            walk(_filemask,'dac')
+            self.walk(_filemask,'dac')
         
         #unobfuscate the file relative to the working directory
         #since files are served from ipyhton notebook from ./files/
-        all_relative = [{ 'thumbpath':'./files/'+os.path.relpath(k['thumbpath'],start=os.getcwd()),'datapath':k['datapath'] } for k in self.allthumbs]
+        all_relative = [{ 'thumbpath':'./files/'+os.path.relpath(k['thumbpath'],start=os.getcwd()),'datapath':k['datapath'] } for k in self._allthumbs]
     
-        print all_relative
+        # print all_relative
         out=u"""
         <table>
     

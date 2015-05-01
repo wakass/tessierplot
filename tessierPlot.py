@@ -189,7 +189,7 @@ def parseheader(file):
 	val = [dict(x) for x in val]
 	
 	all=val+coord
-	return names, skipindex,all
+	return names, skipindex#,all
 
 def quickplot(file,**kwargs):
 	names,skipindex = parseheader(file)
@@ -299,6 +299,13 @@ def scanplot(file,fig=None,n_index=None,style=[],data=None,**kwargs):
 
 	plt.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3,
 		   ncol=2, mode="expand", borderaxespad=0.)
+		   
+	ax = fig.axes[0]
+	xaxislabel = parseUnitAndNameFromColumnName(names[-2])
+	yaxislabel = parseUnitAndNameFromColumnName(names[-1])
+		
+	ax.set_xlabel(xaxislabel[0]+'(' + xaxislabel[1] +')')
+	ax.set_ylabel(yaxislabel[0]+'(' + yaxislabel[1] +')')
 	from IPython.core import display
 	#display.display(fig)
 	return fig
@@ -665,9 +672,95 @@ class plot3DSlices:
 
 class plotR:
 	def __init__(self,file,fiddle=True):
+		self.header = None
+		self.names = None
+		self.fig = None
+	
+		
 		self.file = file
 		self.data  = self.loadFile(file) 
-	def getnDimFromData():
+		
+		
+		
+		
+	def quickplot(self,**kwargs):
+		nDim = self.getnDimFromData()
+
+		if nDim == 2:
+			self.plot2d(**kwargs)
+		elif nDim == 1:
+			self.plot2d(**kwargs)
+		else:
+			self.plot2d(**kwargs) 
+	def plot3d(self): #previously plot3dslices
+		return
+	
+	def plot2d(self,n_index=None,style=['normal'],**kwargs): #previously scanplot
+# 		scanplot(file,fig=None,n_index=None,style=[],data=None,**kwargs):
+		#kwargs go into matplotlib/pyplot plot command
+		
+		if not self.fig:
+			self.fig = plt.figure()
+		
+		if self.data is None:
+			print('loading')
+			self.loadFile(file)
+	
+		uniques_col = []
+	
+		#scanplot assumes 2d plots with data in the two last columns
+		uniques_col_str = [i['name'] for i in self.header if i['type']=='coordinate' ][:-1]    
+	
+		reg = re.compile(r'\{(.*?)\}')
+		parsedcols = []
+		#do some filtering of the colstr to get seperate name and unit of said name
+		for a in uniques_col_str:
+			z = reg.findall(a)
+			if len(z) > 0:
+				parsedcols.append(z[0])
+			else:
+				parsedcols.append('')
+			#name is first
+
+		
+		for i in uniques_col_str:
+			col = getattr(self.data,i)
+			uniques_col.append(col)
+
+		if n_index != None:
+			n_index = np.array(n_index)
+			nplots = len(n_index)
+		
+		for i,j in enumerate(buildLogicals(uniques_col)):
+			if n_index != None:
+					if i not in n_index:
+						continue
+			filtereddata = self.data.loc[j]
+			title =''
+			for i,z in enumerate(uniques_col_str):
+				title = '\n'.join([title, '{:s}: {:g} (mV)'.format(parsedcols[i],getattr(filtereddata,z).iloc[0])])
+
+			x =  np.array(filtereddata.iloc[:,-2])
+			y =  np.array(filtereddata.iloc[:,-1])
+	
+			wrap = tstyle.getPopulatedWrap(style)
+			wrap['XX'] = y
+			tstyle.processStyle(style,wrap)
+			ax = plt.plot(x,wrap['XX'],label=title,**kwargs)
+				
+			
+		plt.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3,
+			   ncol=2, mode="expand", borderaxespad=0.)
+		ax = self.fig.axes[0]
+		xaxislabel = parseUnitAndNameFromColumnName(self.header[-2]['name'])
+		yaxislabel = parseUnitAndNameFromColumnName(self.header[-1]['name'])
+		
+		ax.set_xlabel(xaxislabel[0]+'(' + xaxislabel[1] +')')
+		ax.set_ylabel(yaxislabel[0]+'(' + yaxislabel[1] +')')
+		return self.fig
+		
+		
+	def getnDimFromData(self):
 
 		nDim = 0
 		cols = self.data.columns.tolist()
@@ -675,26 +768,25 @@ class plotR:
 		filterdata = filterdata.dropna(how='any')
 		#first determine the columns belong to the axes (not measure) coordinates
 		cols = [i for i in self.header if (i['type'] == 'coordinate')]
-
+		
 		for i in cols:
 			col = getattr(filterdata,i['name'])
 			if len(col.unique()) > 1: #do not count 0d axes..(i.e. with only 1 unique value)
 				nDim += 1
-# 			self.uniques_per_col.append(list(col.unique()))
 		return nDim
-	def loadFile(file):
-		#print('loading...')
+	
+	def loadFile(self,file):
+
 		self.header,self.skiprows = self.parseheader(file)
-		data = pd.read_csv(file, sep='\t', comment='#',skiprows=self.skiprows,names=[i['names'] for i in self.header)
+		data = pd.read_csv(file, sep='\t', comment='#',skiprows=self.skiprows,names=[i['name'] for i in self.header])
 		data.name = file
 		return data
 	
-	
-	def toggleFiddle():
+	def toggleFiddle(self):
 		from IPython.core import display
 		if mpl.get_backend() == 'Qt4Agg':
 			display.display(self.fig)
-
+		
 		if fiddle and (mpl.get_backend() == 'Qt4Agg'):
 			self.fiddle = Fiddle(self.fig)
 			axFiddle = plt.axes([0.1, 0.85, 0.15, 0.075])
@@ -706,6 +798,63 @@ class plotR:
 			#attach to the relevant figure to make sure the object does not go out of scope
 			self.fig.fiddle = self.fiddle
 			self.fig.bnext = self.bnext
+	
+	def parseheader(self,file):
+		skipindex = 0
+		with open(file) as f:	
+			for i, line in enumerate(f):
+				if i < 3:
+					continue
+				if i > 5:
+					if line[0] != '#': #find the skiprows accounting for the first linebreak in the header
+						skipindex = i
+						break
+				if i > 300:
+					break
+		#nog een keer dunnetjes overdoen met read()
+		f = open(file)
+		alltext= f.read(skipindex)		
+		with open(file) as myfile:
+			alltext = [next(myfile) for x in xrange(skipindex)]
+		alltext= ''.join(alltext)
+	
+		#doregex
+		coord_expression = re.compile(r"""
+									^\#\s*Column\s(.*?)\:
+									[\r\n]{2}
+									\#\s*end\:\s(.*?)
+									[\r\n]{2}
+									\#\s*name\:\s(.*?)
+									[\r\n]{2}
+									\#\s*size\:\s(.*?)
+									[\r\n]{2}
+									\#\s*start\:\s(.*?)
+									[\r\n]{2}
+									\#\s*type\:\s(.*?)\r$ 
+									
+									"""#annoying \r's...
+									,re.VERBOSE |re.MULTILINE)
+		
+		val_expression = re.compile(r"""
+									^\#\s*Column\s(.*?)\:
+									[\r\n]{2}
+									\#\s*name\:\s(.*?)
+									[\r\n]{2}
+									\#\s*type\:\s(.*?)\r$
+									"""
+									,re.VERBOSE |re.MULTILINE)
+		coord=  coord_expression.findall(alltext) 
+		val  = val_expression.findall(alltext)
+		coord = [ zip(('column','end','name','size','start','type'),x) for x in coord]
+		coord = [dict(x) for x in coord]
+		val = [ zip(('column','name','type'),x) for x in val]
+		val = [dict(x) for x in val]
+		
+		header=coord+val
+		self.skipindex = skipindex
+		self.header = header
+		
+		return header,skipindex
 	
 	def exportToMtx(self):
 
