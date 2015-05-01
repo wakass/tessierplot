@@ -18,7 +18,8 @@ import numpy as np
 import math
 
 import re
-
+import os
+_moduledir = os.path.dirname(os.path.realpath(__file__))
 import tessierStyles as tstyle
 from imp import reload #DEBUG
 reload(tstyle) #DEBUG
@@ -125,16 +126,19 @@ class Fiddle:
 
 def parseheader(file):
 	names = []
+	types= []
+	all = []
 	skipindex = 0
-	with open(file) as f:
-		colname = re.compile(r'^#.*?name\:{1}(.*?)\r?$')
+	with open(file) as f:	
 
+		colname = re.compile(r'^#.*?name\:{1}\s(.*?)\r?$')
+		type    = re.compile(r'^#.*?type\:{1}\s(.*?)\r?$')
 		for i, line in enumerate(f):
 			if i < 3:
 				continue
-			#print(line)
+
 			a = colname.findall(line)
-			#print(a)
+			b = type.findall(line)
 			if len(a) >= 1:
 				names.append(a[0])
 			if i > 5:
@@ -143,8 +147,49 @@ def parseheader(file):
 					break
 			if i > 300:
 				break
-	#print(names)
-	return names, skipindex
+	#nog een keer dunnetjes overdoen met read()
+	f = open(file)
+	alltext= f.read(skipindex)
+	
+	with open(file) as myfile:
+		alltext = [next(myfile) for x in xrange(skipindex)]
+		
+	alltext= ''.join(alltext)
+
+	#doregex
+	coord_expression = re.compile(r"""
+								^\#\s*Column\s(.*?)\:
+								[\r\n]{2}
+								\#\s*end\:\s(.*?)
+								[\r\n]{2}
+								\#\s*name\:\s(.*?)
+								[\r\n]{2}
+								\#\s*size\:\s(.*?)
+								[\r\n]{2}
+								\#\s*start\:\s(.*?)
+								[\r\n]{2}
+								\#\s*type\:\s(.*?)\r$ 
+								
+								"""#annoying \r's...
+								,re.VERBOSE |re.MULTILINE)
+	
+	val_expression = re.compile(r"""
+								^\#\s*Column\s(.*?)\:
+								[\r\n]{2}
+								\#\s*name\:\s(.*?)
+								[\r\n]{2}
+								\#\s*type\:\s(.*?)\r$
+								"""
+								,re.VERBOSE |re.MULTILINE)
+	coord=  coord_expression.findall(alltext) 
+	val  = val_expression.findall(alltext)
+	coord = [ zip(('column','end','name','size','start','type'),x) for x in coord]
+	coord = [dict(x) for x in coord]
+	val = [ zip(('column','name','type'),x) for x in val]
+	val = [dict(x) for x in val]
+	
+	all=val+coord
+	return names, skipindex,all
 
 def quickplot(file,**kwargs):
 	names,skipindex = parseheader(file)
@@ -159,7 +204,44 @@ def parseUnitAndNameFromColumnName(input):
 	z = reg.findall(input)
 	return z
 
-def scanplot(file,fig=None,n_index=None,style='',data=None,**kwargs):
+def getnDimFromData(file,data):
+
+		nDim = 0
+		names,skiprows,header=parseheader(file)
+
+		cols = data.columns.tolist()
+		filterdata = data.sort(cols[:-1])
+		filterdata = filterdata.dropna(how='any')
+		#first determine the columns belong to the axes (not measure) coordinates
+		cols = [i for i in header if (i['type'] == 'coordinate')]
+
+		for i in cols:
+			col = getattr(filterdata,i['name'])
+			if len(col.unique()) > 1: #do not count 0d axes..(i.e. with only 1 unique value)
+				nDim += 1
+# 			self.uniques_per_col.append(list(col.unique()))
+		return nDim
+	
+	
+def starplot(file,fig=None):
+	names,skiprows=parseheader(file)
+	dat = loadFile(file,names,skiprows)
+	# dat=dat.dropna(how='any') #not doing this somehow prevent a line drawn from the beginning to the end of the line?
+
+	if fig == None:
+		fig = plt.figure()
+	else:
+		fig = plt.figure(fig.number)
+
+	#basically project the first and final dimension
+	for i in range(0,len(dat.keys())-1):
+		title = parseUnitAndNameFromColumnName(dat.keys()[i])
+		ax = plt.subplot(len(dat.keys())+1,1,i+1)
+		plt.plot(dat[dat.keys()[i]],(dat[dat.keys()[-1]]),label=title)
+		plt.legend(loc=9, bbox_to_anchor=(-0.5, 0.7), ncol=3)
+	return fig
+	
+def scanplot(file,fig=None,n_index=None,style=[],data=None,**kwargs):
 	#kwargs go into matplotlib/pyplot plot command
 	if not fig:
 		fig = plt.figure()
@@ -204,19 +286,22 @@ def scanplot(file,fig=None,n_index=None,style='',data=None,**kwargs):
 			title = '\n'.join([title, '{:s}: {:g} (mV)'.format(parsedcols[i],getattr(filtereddata,z).iloc[0])])
 
 		measAxisDesignation = parseUnitAndNameFromColumnName(filtereddata.keys()[-1])
+		
+		x =  np.array(filtereddata.iloc[:,-2])
+		y =  np.array(filtereddata.iloc[:,-1])
 
-		wrap = tstyle.getEmptyWrap()
-		#put in the last column, the 'measured' value so to say
-		wrap['XX'] = filtereddata.iloc[:,-1]
+		wrap = tstyle.getPopulatedWrap(style)
+		wrap['XX'] = y
 		tstyle.processStyle(style,wrap)
-
-		p = plt.plot(filtereddata.iloc[:,-2],wrap['XX'],label=title,**kwargs)
+		print np.shape(x)
+		print np.shape(wrap['XX'])
+		p = plt.plot(x,wrap['XX'],label=title,**kwargs)
 
 	plt.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3,
 		   ncol=2, mode="expand", borderaxespad=0.)
 	from IPython.core import display
 	#display.display(fig)
-	return fig,data
+	return fig
 
 def loadFile(file,names=['L','B1','B2','vsd','zz'],skiprows=25):
 	#print('loading...')
@@ -224,7 +309,7 @@ def loadFile(file,names=['L','B1','B2','vsd','zz'],skiprows=25):
 	data.name = file
 	return data
 
-def loadCustomColormap(file='./cube1.xls'):
+def loadCustomColormap(file=os.path.join(_moduledir,'cube1.xls')):
 	xl = pd.ExcelFile(file)
 
 	dfs = {sheet: xl.parse(sheet) for sheet in xl.sheet_names}
@@ -576,4 +661,87 @@ class plot3DSlices:
 			self.fig.bnext = self.bnext
 		#plt.show()
 
-	 
+
+
+class plotR:
+	def __init__(self,file,fiddle=True):
+		self.file = file
+		self.data  = self.loadFile(file) 
+	def getnDimFromData():
+
+		nDim = 0
+		cols = self.data.columns.tolist()
+		filterdata = self.data.sort(cols[:-1])
+		filterdata = filterdata.dropna(how='any')
+		#first determine the columns belong to the axes (not measure) coordinates
+		cols = [i for i in self.header if (i['type'] == 'coordinate')]
+
+		for i in cols:
+			col = getattr(filterdata,i['name'])
+			if len(col.unique()) > 1: #do not count 0d axes..(i.e. with only 1 unique value)
+				nDim += 1
+# 			self.uniques_per_col.append(list(col.unique()))
+		return nDim
+	def loadFile(file):
+		#print('loading...')
+		self.header,self.skiprows = self.parseheader(file)
+		data = pd.read_csv(file, sep='\t', comment='#',skiprows=self.skiprows,names=[i['names'] for i in self.header)
+		data.name = file
+		return data
+	
+	
+	def toggleFiddle():
+		from IPython.core import display
+		if mpl.get_backend() == 'Qt4Agg':
+			display.display(self.fig)
+
+		if fiddle and (mpl.get_backend() == 'Qt4Agg'):
+			self.fiddle = Fiddle(self.fig)
+			axFiddle = plt.axes([0.1, 0.85, 0.15, 0.075])
+
+
+			self.bnext = Button(axFiddle, 'Fiddle')
+			self.bnext.on_clicked(self.fiddle.connect)
+
+			#attach to the relevant figure to make sure the object does not go out of scope
+			self.fig.fiddle = self.fiddle
+			self.fig.bnext = self.bnext
+	
+	def exportToMtx(self):
+
+		for j, i in enumerate(self.exportData):
+
+			data = i
+			print(j)
+			m = self.exportDataMeta[j]
+
+			sz = np.shape(data)
+			#write
+			try:
+				fid = open('{:s}{:d}{:s}'.format(self.data.name, j, '.mtx'),'w+')
+			except Exception as e:
+				print('Couldnt create file: {:s}'.format(str(e)))
+				return
+
+			#example of first two lines
+			#Units, Data Value at Z = 0.5 ,X, 0.000000e+000, 1.200000e+003,Y, 0.000000e+000, 7.000000e+002,Nothing, 0, 1
+			#850 400 1 8
+			str1 = 'Units, Name: {:s}, {:s}, {:f}, {:f}, {:s}, {:f}, {:f}, {:s}, {:f}, {:f}\n'.format(
+				m['datasetname'],
+				m['xname'],
+				m['xlims'][0],
+				m['xlims'][1],
+				m['yname'],
+				m['ylims'][0],
+				m['ylims'][1],
+				m['zname'],
+				m['zlims'][0],
+				m['zlims'][1]
+				)
+			floatsize = 8
+			str2 = '{:d} {:d} {:d} {:d}\n'.format(m['xu'],m['yu'],1,floatsize)
+			fid.write(str1)
+			fid.write(str2)
+			#reshaped = np.reshape(data,sz[0]*sz[1],1)
+			data.tofile(fid)
+			fid.close()
