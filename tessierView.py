@@ -84,7 +84,7 @@ class tessierView:
         images = 0
         self.allthumbs = []
     
-        reg = re.compile(filemask) #get only files determined by filemask
+        reg = re.compile(self._filemask) #get only files determined by filemask
     
         for dirname,dirnames,filenames in chain.from_iterable(os.walk(path) for path in paths):
             for filename in filenames:
@@ -102,7 +102,7 @@ class tessierView:
     
     def htmlout(self,refresh=False):
         if refresh:
-            self.walk(_filemask,'dac')
+            self.walk(self._filemask,'dac')
         
         #unobfuscate the file relative to the working directory
         #since files are served from ipyhton notebook from ./files/
@@ -110,20 +110,26 @@ class tessierView:
     
         # print all_relative
         out=u"""
-        <table>
-    
+        <div>
     {% for item in items %}
-        <tr>
-        <td>
-        <img src="{{ item.thumbpath }}"/> 
-        </td>
-        <td>
-        <button id='{{ item.datapath }}' onClick='plot(this.id,"normal","dsf")'>Normal</button>
-        </td>
-        </tr>
+
+    {% if loop.index % 3 == 1 %}
+        <div class='row'>
+    {% endif %}
+
+        <div class='col'>
+            <div class='thumb'>
+            <img src="{{ item.thumbpath }}"/> 
+            </div>
+            <div class='controls'>
+            <button id='{{ item.datapath }}' onClick='plot(this.id,"normal","dsf")'>Normal</button>
+            </div>
+        </div>
+    {% if loop.index % 3 == 0 %}
+        </div>
+    {% endif %}
     {% endfor %}    
-        
-        </table>
+    </div>
         <script type="text/Javascript">
             function handle_output(out){
                     
@@ -138,6 +144,13 @@ class tessierView:
                 var msg_id = kernel.execute(exec, callbacks, {silent:false});
             }
         </script>
+        
+        <style type="text/css">
+        @media (min-width: 30em) {
+            .row { width: 100%; display: table; table-layout: fixed; }
+            .col { display: table-cell;  width: 100%;  }
+        }
+        </style>
         """
         temp = jj.Template(out)
                  
