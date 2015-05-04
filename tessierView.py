@@ -27,6 +27,8 @@ pylab.rcParams['figure.figsize'] = (_plot_width, _plot_height) #(width in inch, 
 pylab.rcParams['axes.labelsize'] = _fontsize_axis_labels
 pylab.rcParams['xtick.labelsize'] = _fontsize_axis_tick_labels
 pylab.rcParams['ytick.labelsize'] = _fontsize_axis_tick_labels
+pylab.rcParams['legend.fontsize'] = 10
+# pylab.rcParams['legend.linewidth'] = 10
 
 class tessierView:
     def __init__(self, rootdir='/Users/waka/phd/pynotes/data/dipstick/data/20150430/', filemask='.*\.dat$',filterstring=''):
@@ -61,21 +63,33 @@ class tessierView:
         #create a thumbnail and store it in the same directory and in the thumbnails dir for local file serving, override options for if file already exists
         thumbfile = self.getthumbcachepath(file)
         thumbfile_datadir =  self.getthumbdatapath(file)
-        if (os.path.exists(thumbfile) and override) or (not os.path.exists(thumbfile)):
-            try:
+        try:
+            if ((not os.path.exists(thumbfile)) or override):
+#                 print 'thumb'
+                #now make thumbnail because it doesnt exist or if u need to refresh
                 p = ts.plotR(file)
-                p.quickplot() #make quickplot more intelligent so it detect dimensionality from uniques
-                p.fig.subplots_adjust(top=0.9, bottom=0.15, left=0.15, right=0.85,hspace=0.0)
-                p.fig.savefig(thumbfile)
-                p.fig.savefig(thumbfile_datadir)
-                plt.close(p.fig)
-            except Exception,e:
-                thumbfile = None #if fail no thumbfile was created
-                print 'Error {:s}'.format(e)
-                pass
-        #do nothing if thumb exists
-        
-        
+#                 print p.data
+                if len(p.data) > 20: ##just make sure really unfinished measurements are thrown out
+                    p.quickplot() #make quickplot more intelligent so it detect dimensionality from uniques
+                    p.fig.subplots_adjust(top=0.9, bottom=0.15, left=0.15, right=0.85,hspace=0.0)
+                    p.fig.savefig(thumbfile)
+                    p.fig.savefig(thumbfile_datadir)
+                    plt.close(p.fig)
+                else:
+#                     print 'data too short'
+                    thumbfile = None
+            else:
+#                 print 'no thumb'
+                p = ts.plotR(file)
+                if len(p.data) <= 20:
+                    thumbfile = None #dont give back a thumbnail if data is unfinished
+                #thumb does exist, but overridden. Generate anew
+            
+        except Exception,e:
+            thumbfile = None #if fail no thumbfile was created
+            print 'Error {:s} for file {:s}'.format(e,file)
+            pass
+            
         return thumbfile
     
     
@@ -93,7 +107,7 @@ class tessierView:
                 if res: #found a file that matches the filemask
                     if filterstring in open(self.getsetfilepath(fullpath)).read():   #liable for improvement
                     #check for certain parameters with filterstring in the set file: e.g. 'dac4: 1337.0'
-                        thumbpath = self.makethumbnail(fullpath)
+                        thumbpath = self.makethumbnail(fullpath,**kwargs)
                         if thumbpath:
                             self._allthumbs.append({'datapath':fullpath,'thumbpath':thumbpath})
                             images += 1
@@ -101,9 +115,7 @@ class tessierView:
         return self._allthumbs
     
     def htmlout(self,refresh=False):
-        if refresh:
-            self.walk(self._filemask,'dac')
-        
+        self.walk(self._filemask,'dac',override=refresh)
         #unobfuscate the file relative to the working directory
         #since files are served from ipyhton notebook from ./files/
         all_relative = [{ 'thumbpath':'./files/'+os.path.relpath(k['thumbpath'],start=os.getcwd()),'datapath':k['datapath'] } for k in self._allthumbs]
@@ -137,8 +149,8 @@ class tessierView:
             function plot(id,x,y){
                 dir = id.split('/');
                 
-                exec = '{{ plotcommand }}';
-                
+                exec = 'file \= \"' + id + '\"; {{ plotcommand }}';
+                alert(exec)
                 var kernel = IPython.notebook.kernel;
                 var callbacks = { 'iopub' : {'output' : handle_output}};
                 var msg_id = kernel.execute(exec, callbacks, {silent:false});
@@ -153,5 +165,5 @@ class tessierView:
         </style>
         """
         temp = jj.Template(out)
-                 
-        display(HTML(temp.render(items=all_relative,plotcommand='a=1')))
+        plotcommand = """import tessierPlot as ts; p = ts.plotR(file); p.quickplot() """      
+        display(HTML(temp.render(items=all_relative,plotcommand=plotcommand)))
