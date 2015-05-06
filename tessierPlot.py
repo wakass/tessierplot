@@ -462,7 +462,7 @@ class plot3DSlices:
 
 		#fig,axs = plt.subplots(1,1,sharex=True)
 		self.fig = plt.figure()
-		self.fig.subplots_adjust(top=0.96, bottom=0.03, left=0.1, right=0.9,hspace=0.0)
+		self.fig.subplots_adjust(top=0.96, bottom=0.07, left=0.07, right=0.9,hspace=0.0)
 
 
 		nplots = 1
@@ -676,24 +676,221 @@ class plotR:
 		self.names = None
 		self.fig = None
 	
-		
+		self.exportData =[]		
 		self.file = file
 		self.data  = self.loadFile(file) 
 		
+		self.ndim = self.getnDimFromData()
+		self.dims = self.getdimFromData()
 		
 		
 		
 	def quickplot(self,**kwargs):
-		nDim = self.getnDimFromData()
+		nDim = self.ndim
+		#if the uniques of a dimension is less than x, plot in consequential 2d, otherwise 3d
 
-		if nDim == 2:
-			self.plot2d(**kwargs)
-		elif nDim == 1:
-			self.plot2d(**kwargs)
+		#maybe put logic here to plot some uniques as well from nonsequential axes?
+		filter = self.dims < 5
+		filter_neg = np.array([not x for x in filter])
+
+		coords = np.array([x['name'] for x in self.header if x['type']=='coordinate'])
+		
+		uniques_col_str = coords[filter]
+
+		if len(coords[filter_neg]) > 1: 
+			print 'plot3d'
+			self.plot3d(uniques_col_str=uniques_col_str)
 		else:
-			self.plot2d(**kwargs) 
-	def plot3d(self): #previously plot3dslices
-		return
+			print 'plot2d'
+			self.plot2d()		
+
+	def plot3d(self,fiddle=True,uniques_col_str=[],n_index=None,style='normal',clim=(0,0),aspect='auto',interpolation='none',**kwargs): #previously plot3dslices
+		if not self.fig:
+			self.fig = plt.figure()
+		
+		if self.data is None:
+			print('loading')
+			self.loadFile(file)
+			
+			
+		print('sorting...')
+		cols = self.data.columns.tolist()
+		filterdata = self.data.sort(cols[:-1])
+		filterdata = filterdata.dropna(how='any')
+
+		uniques_col = []
+		self.uniques_per_col=[]
+		
+		
+		sweepdirection = self.data[cols[-1]][0] > self.data[cols[-1]][1] #True is sweep neg to pos
+		
+				
+
+		for i in uniques_col_str:
+			col = getattr(filterdata,i)
+			uniques_col.append(col)
+			self.uniques_per_col.append(list(col.unique()))
+
+		self.ccmap = loadCustomColormap()
+
+
+		self.fig.subplots_adjust(top=0.96, bottom=0.07, left=0.07, right=0.9,hspace=0.0)
+
+
+		nplots = 1
+		for i in self.uniques_per_col:
+			nplots *= len(i)
+
+		if n_index != None:
+			n_index = np.array(n_index)
+			nplots = len(n_index)
+			
+
+		cnt=0
+		#enumerate over the generated list of unique values specified in the uniques columns
+		for j,ind in enumerate(buildLogicals(uniques_col)):
+			if n_index != None:
+				if j not in n_index:
+					continue
+
+			slicy = filterdata.loc[ind]
+			#get all the last columns, that we assume contains the to be plotted data
+			x=slicy.iloc[:,-3]
+			y=slicy.iloc[:,-2]
+			z=slicy.iloc[:,-1]
+
+			xu = np.size(x.unique())
+			yu = np.size(y.unique())
+
+
+			## if the measurement is not complete this will probably fail so trim of the final sweep?
+			print('xu: {:d}, yu: {:d}, lenz: {:d}'.format(xu,yu,len(z)))
+
+			if xu*yu != len(z):
+				xu = (len(z) / yu) #dividing integers so should automatically floor the value
+
+			#trim the first part of the sweep, for different min max, better to trim last part?
+			#or the first since there has been sorting
+			#this doesnt work for e.g. a hilbert measurement
+
+			print('xu: {:d}, yu: {:d}, lenz: {:d}'.format(xu,yu,len(z)))
+
+			#sorting sorts negative to positive, so beware:
+			#sweep direction determines which part of array should be cut off
+			if sweepdirection:
+				z = z[-xu*yu:]
+				x = x[-xu*yu:]
+				y = y[-xu*yu:]
+			else:
+				z = z[:xu*yu]
+				x = x[:xu*yu]
+				y = y[:xu*yu]
+
+				XX = np.reshape(z,(xu,yu))
+
+			self.x = x
+			self.y = y
+			self.z = z
+			#now set the lims
+			xlims = (x.min(),x.max())
+			ylims = (y.min(),y.max())
+
+			#determine stepsize for di/dv, inprincipe only y step is used (ie. the diff is also taken in this direction and the measurement swept..)
+			xstep = (xlims[0] - xlims[1])/xu
+			ystep = (ylims[0] - ylims[1])/yu
+			ext = xlims+ylims
+
+
+			self.XX = XX
+			
+			self.exportData.append(XX)
+			try:
+				m={
+					'xu':xu,
+					'yu':yu,
+					'xlims':xlims,
+					'ylims':ylims,
+					'zlims':(0,0),
+					'xname':cols[-3],
+					'yname':cols[-2],
+					'zname':'unused',
+					'datasetname':data.name}
+				self.exportDataMeta = np.append(self.exportDataMeta,m)
+			except:
+				pass
+
+			ax = plt.subplot(nplots, 1, cnt+1)
+			cbar_title = ''
+			
+			
+			if type(style) != list:
+				style = list([style])
+
+			measAxisDesignation = parseUnitAndNameFromColumnName(self.data.keys()[-1])
+			#wrap all needed arguments in a datastructure
+			cbar_quantity = measAxisDesignation[0]
+			cbar_unit = measAxisDesignation[1]
+			cbar_trans = [] #trascendental tracer :P For keeping track of logs and stuff
+
+			w = tstyle.getPopulatedWrap(style)
+			w2 = {'ext':ext, 'ystep':ystep,'XX': XX, 'cbar_quantity': cbar_quantity, 'cbar_unit': cbar_unit, 'cbar_trans':cbar_trans}
+			for k in w2:
+				w[k] = w2[k]
+			tstyle.processStyle(style, w)
+
+			#unwrap
+			ext = w['ext']
+			XX = w['XX']
+			cbar_trans_formatted = ''.join([''.join(s+'(') for s in w['cbar_trans']])
+			cbar_title = cbar_trans_formatted + w['cbar_quantity'] + ' (' + w['cbar_unit'] + ')'
+			if len(w['cbar_trans']) is not 0:
+				cbar_title = cbar_title + ')'
+
+			#postrotate np.rot90
+			XX = np.rot90(XX)
+
+			if 'deinterlace' in style:
+				self.fig = plt.figure()
+				ax_deinter_odd  = plt.subplot(2, 1, 1)
+				w['deinterXXodd'] = np.rot90(w['deinterXXodd'])
+				ax_deinter_odd.imshow(w['deinterXXodd'],extent=ext, cmap=plt.get_cmap(self.ccmap),aspect=aspect,interpolation=interpolation)
+
+				ax_deinter_even = plt.subplot(2, 1, 2)
+				w['deinterXXeven'] = np.rot90(w['deinterXXeven'])
+				ax_deinter_even.imshow(w['deinterXXeven'],extent=ext, cmap=plt.get_cmap(self.ccmap),aspect=aspect,interpolation=interpolation)
+
+			self.im = ax.imshow(XX,extent=ext, cmap=plt.get_cmap(self.ccmap),aspect=aspect,interpolation=interpolation, norm=w['imshow_norm'])
+			if clim != (0,0):
+			   self.im.set_clim(clim)
+
+			if 'flipaxes' in style:
+				ax.set_xlabel(cols[-2])
+				ax.set_ylabel(cols[-3])
+			else:
+				ax.set_xlabel(cols[-3])
+				ax.set_ylabel(cols[-2])
+
+
+			title = ''
+			for i in uniques_col_str:
+				title = '\n'.join([title, '{:s}: {:g} (mV)'.format(i,getattr(slicy,i).iloc[0])])
+			print(title)
+			if 'notitle' not in style:
+				ax.set_title(title)
+			# create an axes on the right side of ax. The width of cax will be 5%
+			# of ax and the padding between cax and ax will be fixed at 0.05 inch.
+			divider = make_axes_locatable(ax)
+			cax = divider.append_axes("right", size="5%", pad=0.05)
+
+			pos = list(ax.get_position().bounds)
+
+			self.cbar = plt.colorbar(self.im, cax=cax)
+			cbar = self.cbar
+
+			cbar.set_label(cbar_title)
+
+			cnt+=1 #counter for subplots
+		self.toggleFiddle()
 	
 	def plot2d(self,n_index=None,style=['normal'],**kwargs): #previously scanplot
 # 		scanplot(file,fig=None,n_index=None,style=[],data=None,**kwargs):
@@ -761,8 +958,12 @@ class plotR:
 		
 		
 	def getnDimFromData(self):
-
-		nDim = 0
+		dims = np.array(self.getdimFromData())
+		nDim = len(dims[dims > 1])
+		return nDim
+	
+	def getdimFromData(self):
+		dims = np.array([],dtype='int')
 		cols = self.data.columns.tolist()
 		filterdata = self.data.sort(cols[:-1])
 		filterdata = filterdata.dropna(how='any')
@@ -771,9 +972,8 @@ class plotR:
 		
 		for i in cols:
 			col = getattr(filterdata,i['name'])
-			if len(col.unique()) > 1: #do not count 0d axes..(i.e. with only 1 unique value)
-				nDim += 1
-		return nDim
+			dims = np.hstack( ( dims ,len(col.unique())  ) )
+		return dims
 	
 	def loadFile(self,file):
 
@@ -787,7 +987,7 @@ class plotR:
 		if mpl.get_backend() == 'Qt4Agg':
 			display.display(self.fig)
 		
-		if fiddle and (mpl.get_backend() == 'Qt4Agg'):
+		if (mpl.get_backend() == 'Qt4Agg'):
 			self.fiddle = Fiddle(self.fig)
 			axFiddle = plt.axes([0.1, 0.85, 0.15, 0.075])
 
@@ -854,7 +1054,7 @@ class plotR:
 		self.skipindex = skipindex
 		self.header = header
 		
-		return header,skipindex
+		return np.array(header),skipindex
 	
 	def exportToMtx(self):
 
