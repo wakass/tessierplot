@@ -699,10 +699,10 @@ class plotR:
 
 		if len(coords[filter_neg]) > 1: 
 			print 'plot3d'
-			self.plot3d(uniques_col_str=uniques_col_str)
+			self.plot3d(uniques_col_str=uniques_col_str,**kwargs)
 		else:
 			print 'plot2d'
-			self.plot2d()		
+			self.plot2d(**kwargs)		
 
 	def plot3d(self,fiddle=True,uniques_col_str=[],n_index=None,style='normal',clim=(0,0),aspect='auto',interpolation='none',**kwargs): #previously plot3dslices
 		if not self.fig:

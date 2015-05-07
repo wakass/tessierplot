@@ -136,6 +136,7 @@ class tessierView(object):
             </div>
             <div class='controls'>
             <button id='{{ item.datapath }}' onClick='plot(this.id,"normal","dsf")'>Normal</button>
+            <button id='{{ item.datapath }}' onClick='plot(this.id,"&#91;\&quot;savgol\&quot;,\&quot;didv\&quot;,\&quot;abs\&quot;&#93;","dsf")'>dIdV</button>
             </div>
         </div>
     {% if loop.index % 3 == 0 %}
@@ -151,11 +152,43 @@ class tessierView(object):
                 dir = id.split('/');
                 
                 exec = 'file \= \"' + id + '\"; {{ plotcommand }}';
+                exec = exec.printf(x)
 
                 var kernel = IPython.notebook.kernel;
                 var callbacks = { 'iopub' : {'output' : handle_output}};
                 var msg_id = kernel.execute(exec, callbacks, {silent:false});
             }
+            String.prototype.printf = function (obj) {
+                var useArguments = false;
+                var _arguments = arguments;
+                var i = -1;
+                if (typeof _arguments[0] == "string") {
+                useArguments = true;
+                }
+                if (obj instanceof Array || useArguments) {
+                return this.replace(/\%s/g,
+                function (a, b) {
+                  i++;
+                  if (useArguments) {
+                    if (typeof _arguments[i] == 'string') {
+                      return _arguments[i];
+                    }
+                    else {
+                      throw new Error("Arguments element is an invalid type");
+                    }
+                  }
+                  return obj[i];
+                });
+                }
+                else {
+                return this.replace(/{([^{}]*)}/g,
+                function (a, b) {
+                  var r = obj[b];
+                  return typeof r === 'string' || typeof r === 'number' ? r : a;
+                });
+                }
+            };
+
         </script>
         
         <style type="text/css">
@@ -166,5 +199,5 @@ class tessierView(object):
         </style>
         """
         temp = jj.Template(out)
-        plotcommand = """import tessierPlot as ts; p = ts.plotR(file); p.quickplot() """      
+        plotcommand = """import tessierPlot as ts; p = ts.plotR(file); p.quickplot(style=%s) """      
         return temp.render(items=all_relative,plotcommand=plotcommand)
