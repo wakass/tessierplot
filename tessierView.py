@@ -75,9 +75,9 @@ class tessierView(object):
                 p = ts.plotR(file)
                 if len(p.data) > 20: ##just make sure really unfinished measurements are thrown out
                     p.quickplot() #make quickplot more intelligent so it detect dimensionality from uniques
-                    p.fig.subplots_adjust(top=0.9, bottom=0.15, left=0.15, right=0.85,hspace=0.0)
-                    p.fig.savefig(thumbfile)
-                    p.fig.savefig(thumbfile_datadir)
+#                     p.fig.subplots_adjust(top=0.9, bottom=0.15, left=0.15, right=0.85,hspace=0.0)
+                    p.fig.savefig(thumbfile,bbox_inches='tight' )
+                    p.fig.savefig(thumbfile_datadir,bbox_inches='tight' )
                     plt.close(p.fig)
                 else:
                     thumbfile = None
@@ -110,7 +110,7 @@ class tessierView(object):
                             
         return self._allthumbs
     def _ipython_display_(self):
-        display_html(HTML(self.htmlout(refresh=False),raw=True))
+        display_html(HTML(self.genhtml(refresh=False)))
     
     def htmlout(self,refresh=False):
         display(HTML(self.genhtml(refresh=refresh)))
