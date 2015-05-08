@@ -44,6 +44,16 @@ def helper_savgol(w):
 			w['XX'], int(w['savgol_samples']), int(w['savgol_order']))
 
 def helper_didv(w):
+	a=(w['XX'])
+
+# 	if len(a.shape) == a.ndim: #if 1D 
+# 		print '1d'
+# 		w['XX'] = np.diff(w['XX'])
+# 		print np.shape(w['XX'])
+# 		w['XX'] = np.append(w['XX'],w['XX'][-1])
+# 
+# 		print np.shape(w['XX'])
+# 	else:
 	w['XX'] = np.diff(w['XX'],axis=1)
 	#1 nA / 1 mV = 0.0129064037 conductance quanta
 	w['XX'] = w['XX'] / w['ystep'] * 0.0129064037
@@ -84,6 +94,10 @@ def helper_fancylog(w):
 
 def helper_normal(w):
 	w['XX'] = w['XX']
+	
+def helper_minsubtract(w):
+	w['XX'] = w['XX'] - np.min(w['XX'])
+
 
 def helper_abs(w):
 	w['XX'] = np.abs(w['XX'])
@@ -104,7 +118,8 @@ STYLE_FUNCS = {
 	'mov_avg': helper_mov_avg,
 	'abs': helper_abs,
 	'savgol': helper_savgol,
-	'fancylog': helper_fancylog
+	'fancylog': helper_fancylog,
+	'minsubtract': helper_minsubtract
 }
 
 '''
@@ -124,7 +139,8 @@ STYLE_SPECS = {
 	'mov_avg': {'m': 1, 'n': 5, 'win': None, 'param_order': ['m', 'n', 'win']},
 	'abs': {'param_order': []},
 	'savgol': {'samples': 3, 'order': 1, 'param_order': ['samples', 'order']},
-	'fancylog': {'cmin': None, 'cmax': None, 'param_order': ['cmin', 'cmax']}
+	'fancylog': {'cmin': None, 'cmax': None, 'param_order': ['cmin', 'cmax']},
+	'minsubtract': {'param_order': []}
 }
 
 #Backward compatibility
@@ -185,8 +201,9 @@ def getPopulatedWrap(style=[]):
 def processStyle(style, wrap):
 	for s in style:
 		try:
-			#print(s)
-			STYLE_FUNCS[s.split('(')[0]](wrap)
+# 			print(s)
+			func = STYLE_FUNCS[s.split('(')[0]]
+			func(wrap)
 		except Exception as e:
 			print('processStyle(): Style {:s} does not exist ({:s})'.format(s, str(e)))
 			pass
