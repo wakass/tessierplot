@@ -165,26 +165,26 @@ def parseheader(file):
 	#doregex
 	coord_expression = re.compile(r"""
 								^\#\s*Column\s(.*?)\:
-								[\r\n]{2}
+								[\r\n]{0,2}
 								\#\s*end\:\s(.*?)
-								[\r\n]{2}
+								[\r\n]{0,2}
 								\#\s*name\:\s(.*?)
-								[\r\n]{2}
+								[\r\n]{0,2}
 								\#\s*size\:\s(.*?)
-								[\r\n]{2}
+								[\r\n]{0,2}
 								\#\s*start\:\s(.*?)
-								[\r\n]{2}
-								\#\s*type\:\s(.*?)\r$ 
+								[\r\n]{0,2}
+								\#\s*type\:\s(.*?)[\r\n]{0,2}$ 
 								
 								"""#annoying \r's...
 								,re.VERBOSE |re.MULTILINE)
 	
 	val_expression = re.compile(r"""
 								^\#\s*Column\s(.*?)\:
-								[\r\n]{2}
+								[\r\n]{0,2}
 								\#\s*name\:\s(.*?)
-								[\r\n]{2}
-								\#\s*type\:\s(.*?)\r$
+								[\r\n]{0,2}
+								\#\s*type\:\s(.*?)[\r\n]{0,2}$
 								"""
 								,re.VERBOSE |re.MULTILINE)
 	coord=  coord_expression.findall(alltext) 
@@ -194,7 +194,7 @@ def parseheader(file):
 	val = [ zip(('column','name','type'),x) for x in val]
 	val = [dict(x) for x in val]
 	
-	all=val+coord
+	all=coord+val
 	return names, skipindex#,all
 
 def quickplot(file,**kwargs):
@@ -299,8 +299,8 @@ def scanplot(file,fig=None,n_index=None,style=[],data=None,**kwargs):
 		wrap = tstyle.getPopulatedWrap(style)
 		wrap['XX'] = y
 		tstyle.processStyle(style,wrap)
-		print np.shape(x)
-		print np.shape(wrap['XX'])
+		#print np.shape(x)
+		#print np.shape(wrap['XX'])
 		p = plt.plot(x,wrap['XX'],label=title,**kwargs)
 
 	plt.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3,
@@ -792,7 +792,7 @@ class plotR:
 				x = x[:xu*yu]
 				y = y[:xu*yu]
 
-				XX = np.reshape(z,(xu,yu))
+			XX = np.reshape(z,(xu,yu))
 
 			self.x = x
 			self.y = y
@@ -1032,26 +1032,26 @@ class plotR:
 		#doregex
 		coord_expression = re.compile(r"""
 									^\#\s*Column\s(.*?)\:
-									[\r\n]{2}
+									[\r\n]{0,2}
 									\#\s*end\:\s(.*?)
-									[\r\n]{2}
+									[\r\n]{0,2}
 									\#\s*name\:\s(.*?)
-									[\r\n]{2}
+									[\r\n]{0,2}
 									\#\s*size\:\s(.*?)
-									[\r\n]{2}
+									[\r\n]{0,2}
 									\#\s*start\:\s(.*?)
-									[\r\n]{2}
-									\#\s*type\:\s(.*?)\r$ 
+									[\r\n]{0,2}
+									\#\s*type\:\s(.*?)[\r\n]{0,2}$ 
 									
 									"""#annoying \r's...
 									,re.VERBOSE |re.MULTILINE)
 		
 		val_expression = re.compile(r"""
 									^\#\s*Column\s(.*?)\:
-									[\r\n]{2}
+									[\r\n]{0,2}
 									\#\s*name\:\s(.*?)
-									[\r\n]{2}
-									\#\s*type\:\s(.*?)\r$
+									[\r\n]{0,2}
+									\#\s*type\:\s(.*?)[\r\n]{0,2}$
 									"""
 									,re.VERBOSE |re.MULTILINE)
 		coord=  coord_expression.findall(alltext) 
