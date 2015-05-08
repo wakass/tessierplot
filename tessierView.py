@@ -12,9 +12,6 @@ import re
 from IPython.display import VimeoVideo
 from IPython.display import display, HTML, display_html
 
-import IPython  
-ipy=IPython.get_ipython()
-ipy.magic("pylab qt")
 
 reload(ts)
 

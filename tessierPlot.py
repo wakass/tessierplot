@@ -24,6 +24,12 @@ import tessierStyles as tstyle
 from imp import reload #DEBUG
 reload(tstyle) #DEBUG
 
+import IPython  
+ipy=IPython.get_ipython()
+ipy.magic("pylab qt")
+
+
+
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 class Fiddle:
@@ -682,7 +688,7 @@ class plotR:
 		
 		self.ndim = self.getnDimFromData()
 		self.dims = self.getdimFromData()
-		
+		self.bControls = True #boolean controlling state of plot manipulation buttons
 		
 		
 	def quickplot(self,**kwargs):
@@ -999,6 +1005,11 @@ class plotR:
 			self.fig.fiddle = self.fiddle
 			self.fig.bnext = self.bnext
 	
+	def toggleControls(self,state=None):
+		self.bControls = not self.bControls
+		if state == None:
+			toggleFiddle()
+		
 	def parseheader(self,file):
 		skipindex = 0
 		with open(file) as f:	
