@@ -12,6 +12,10 @@ import re
 from IPython.display import VimeoVideo
 from IPython.display import display, HTML, display_html
 
+import IPython  
+ipy=IPython.get_ipython()
+ipy.magic("pylab qt")
+
 reload(ts)
 
 _plot_width = 4. # in inch (ffing inches eh)
@@ -29,7 +33,9 @@ rcP = {  'figure.figsize': (_plot_width, _plot_height), #(width in inch, height 
         'ytick.labelsize': _fontsize_axis_tick_labels,
         'legend.fontsize': 5.
         }
-pylab.rcParams.update(rcP)
+        
+rcP_old = pylab.rcParams.copy()
+
 # pylab.rcParams['legend.linewidth'] = 10
 
 class tessierView(object):
@@ -71,6 +77,7 @@ class tessierView(object):
         try:
             if ((not os.path.exists(thumbfile)) or override):
                 #now make thumbnail because it doesnt exist or if u need to refresh
+                pylab.rcParams.update(rcP)
 
                 p = ts.plotR(file)
                 if len(p.data) > 20: ##just make sure really unfinished measurements are thrown out
@@ -86,6 +93,9 @@ class tessierView(object):
             print 'Error {:s} for file {:s}'.format(e,file)
             pass
             
+        #put back the old settings
+        pylab.rcParams = rcP_old
+   
         return thumbfile
     
     
@@ -100,6 +110,7 @@ class tessierView(object):
             for filename in filenames:
                 fullpath = os.path.join(dirname,filename)
                 res = reg.findall(filename)
+                
                 if res: #found a file that matches the filemask
                     if filterstring in open(self.getsetfilepath(fullpath)).read():   #liable for improvement
                     #check for certain parameters with filterstring in the set file: e.g. 'dac4: 1337.0'
@@ -135,8 +146,11 @@ class tessierView(object):
             <img src="{{ item.thumbpath }}"/> 
             </div>
             <div class='controls'>
-            <button id='{{ item.datapath }}' onClick='plot(this.id,"normal","dsf")'>Normal</button>
-            <button id='{{ item.datapath }}' onClick='plot(this.id,"&#91;\&quot;savgol\&quot;,\&quot;didv\&quot;,\&quot;abs\&quot;&#93;","dsf")'>dIdV</button>
+            <button id='{{ item.datapath }}' onClick='plot(this.id,"&#91;&#93;","dsf")'>Normal</button>
+            <button id='{{ item.datapath }}' onClick='plot(this.id,"{{"[\\'abs\\',\\'log\\']"|e}}","dsf")'>Log</button>
+            <button id='{{ item.datapath }}' onClick='plot(this.id,"{{"[\\'savgol\\',\\'didv\\',\\'abs\\']"|e}}","dsf")'>dIdV</button>
+            <button id='{{ item.datapath }}' onClick='plot(this.id,"{{" [\\'savgol\\',\\'didv\\',\\'log\\']"|e}} ","dsf")'>Log(dIdV)</button>
+
             </div>
         </div>
     {% if loop.index % 3 == 0 %}
