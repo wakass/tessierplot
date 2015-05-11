@@ -36,7 +36,7 @@ rcP_old = pylab.rcParams.copy()
 # pylab.rcParams['legend.linewidth'] = 10
 
 class tessierView(object):
-    def __init__(self, rootdir='/Users/waka/phd/pynotes/data/dipstick/data/20150430/', filemask='.*\.dat$',filterstring=''):
+    def __init__(self, rootdir, filemask='.*\.dat$',filterstring=''):
         self._root = rootdir
         self._filemask = filemask
         self._filterstring = filterstring
@@ -54,7 +54,7 @@ class tessierView(object):
             preid = ''
         
         #relative to project/working directory
-        cachepath = os.path.join(os.getcwd(),'./thumbnails', preid + '_'+os.path.splitext(os.path.split(file)[1])[0] + '_thumb.png')
+        cachepath = os.path.normpath(os.path.join(os.getcwd(),'thumbnails', preid + '_'+os.path.splitext(os.path.split(file)[1])[0] + '_thumb.png'))
         return cachepath
         
     def getthumbdatapath(self,file):
@@ -147,7 +147,9 @@ class tessierView(object):
             <button id='{{ item.datapath }}' onClick='plot(this.id,"{{"[\\'abs\\',\\'log\\']"|e}}","dsf")'>Log</button>
             <button id='{{ item.datapath }}' onClick='plot(this.id,"{{"[\\'savgol\\',\\'didv\\',\\'abs\\']"|e}}","dsf")'>dIdV</button>
             <button id='{{ item.datapath }}' onClick='plot(this.id,"{{" [\\'savgol\\',\\'didv\\',\\'log\\']"|e}} ","dsf")'>Log(dIdV)</button>
-
+            <button id='{{ item.datapath }}' onClick='tovar(this.id)'>toVar ('file')</button>
+            <br/>
+            <button id='{{ item.datapath }}' onClick='plot(this.id,"{{" [\\'deinterlace\\']"|e}} ","dsf")'>Deinterlace</button>
             </div>
         </div>
     {% if loop.index % 3 == 0 %}
@@ -159,15 +161,22 @@ class tessierView(object):
             function handle_output(out){
                     
             }
+            function pycommand(exec){
+                var kernel = IPython.notebook.kernel;
+                var callbacks = { 'iopub' : {'output' : handle_output}};
+                var msg_id = kernel.execute(exec, callbacks, {silent:false});            
+            }
+            function tovar(id) {
+                exec =' file \= \"' + id + '\"';
+                pycommand(exec);
+            }
             function plot(id,x,y){
                 dir = id.split('/');
                 
                 exec = 'file \= \"' + id + '\"; {{ plotcommand }}';
                 exec = exec.printf(x)
 
-                var kernel = IPython.notebook.kernel;
-                var callbacks = { 'iopub' : {'output' : handle_output}};
-                var msg_id = kernel.execute(exec, callbacks, {silent:false});
+                pycommand(exec);
             }
             String.prototype.printf = function (obj) {
                 var useArguments = false;
@@ -210,5 +219,5 @@ class tessierView(object):
         </style>
         """
         temp = jj.Template(out)
-        plotcommand = """import tessierPlot as ts; p = ts.plotR(file); p.quickplot(style=%s) """      
+        plotcommand = """import tessierPlot as ts; p = ts.plotR(file); p.quickplot(style=\[\\'minsubtract\\'\] + %s) """      
         return temp.render(items=all_relative,plotcommand=plotcommand)

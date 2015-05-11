@@ -684,7 +684,9 @@ class plotR:
 	
 		self.exportData =[]		
 		self.file = file
+
 		self.data  = self.loadFile(file) 
+		self.filterdata = None
 		
 		self.ndim = self.getnDimFromData()
 		self.dims = self.getdimFromData()
@@ -718,11 +720,8 @@ class plotR:
 			print('loading')
 			self.loadFile(file)
 			
-			
-		print('sorting...')
 		cols = self.data.columns.tolist()
-		filterdata = self.data.sort(cols[:-1])
-		filterdata = filterdata.dropna(how='any')
+		filterdata = self.sortdata()
 
 		uniques_col = []
 		self.uniques_per_col=[]
@@ -961,7 +960,14 @@ class plotR:
 		ax.set_xlabel(xaxislabel[0]+'(' + xaxislabel[1] +')')
 		ax.set_ylabel(yaxislabel[0]+'(' + yaxislabel[1] +')')
 		return self.fig
-		
+
+	def sortdata(self,refresh=False):
+		#some light caching
+		if ((self.filterdata) is None) or refresh:
+			cols = self.data.columns.tolist()
+			self.filterdata = self.data.sort(cols[:-1])
+			self.filterdata = self.filterdata.dropna(how='any')		
+		return self.filterdata
 		
 	def getnDimFromData(self):
 		dims = np.array(self.getdimFromData())
@@ -970,9 +976,7 @@ class plotR:
 	
 	def getdimFromData(self):
 		dims = np.array([],dtype='int')
-		cols = self.data.columns.tolist()
-		filterdata = self.data.sort(cols[:-1])
-		filterdata = filterdata.dropna(how='any')
+		filterdata = self.sortdata()
 		#first determine the columns belong to the axes (not measure) coordinates
 		cols = [i for i in self.header if (i['type'] == 'coordinate')]
 		
