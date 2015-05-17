@@ -647,6 +647,7 @@ class plot3DSlices:
 			cbar = self.cbar
 
 			cbar.set_label(cbar_title)
+			plt.tight_layout()
 
 			cnt+=1 #counter for subplots
 
@@ -655,7 +656,7 @@ class plot3DSlices:
 		if mpl.get_backend() == 'Qt4Agg':
 			display.display(self.fig)
 
-		if fiddle and (mpl.get_backend() == 'Qt4Agg'):
+		if fiddle and (mpl.get_backend() == 'Qt4Agg' or 'nbAgg'):
 			self.fiddle = Fiddle(self.fig)
 			axFiddle = plt.axes([0.1, 0.85, 0.15, 0.075])
 
@@ -887,6 +888,7 @@ class plotR:
 			cbar = self.cbar
 
 			cbar.set_label(cbar_title)
+			plt.tight_layout()
 
 			cnt+=1 #counter for subplots
 		self.toggleFiddle()
@@ -991,7 +993,7 @@ class plotR:
 		if mpl.get_backend() == 'Qt4Agg':
 			display.display(self.fig)
 		
-		if (mpl.get_backend() == 'Qt4Agg'):
+		if (mpl.get_backend() == 'Qt4Agg' or 'nbAgg'):
 			self.fiddle = Fiddle(self.fig)
 			axFiddle = plt.axes([0.1, 0.85, 0.15, 0.075])
 
