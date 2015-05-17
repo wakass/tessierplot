@@ -316,9 +316,9 @@ def scanplot(file,fig=None,n_index=None,style=[],data=None,**kwargs):
 	#display.display(fig)
 	return fig
 
-def loadFile(file,names=['L','B1','B2','vsd','zz'],skiprows=25):
+def loadFile(file,names=['L','B1','B2','vsd','zz'],skiprows=0):
 	#print('loading...')
-	data = pd.read_csv(file, sep='\t', comment='#',skiprows=skiprows,names=names)
+	data = pd.read_csv(file, skip_blank_lines=True, sep='\t', comment='#',skiprows=skiprows,names=names)
 	data.name = file
 	return data
 
