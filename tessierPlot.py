@@ -323,14 +323,6 @@ def loadFile(file,names=['L','B1','B2','vsd','zz'],skiprows=25):
 	return data
 
 def loadCustomColormap(file='./cube1.txt'):
-#	xl = pd.ExcelFile(file)
-#
-#	dfs = {sheet: xl.parse(sheet) for sheet in xl.sheet_names}
-#	for i in dfs.keys():
-#		r = dfs[i]
-#		ls = [r.iloc[:,0],r.iloc[:,1],r.iloc[:,2]]
-#		do = zip(*ls)
-
 	do = np.loadtxt(file)
 
 	ccmap = mpl.colors.LinearSegmentedColormap.from_list('name',do)
