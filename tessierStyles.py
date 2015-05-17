@@ -32,6 +32,13 @@ def helper_deinterlace(w):
 	#w.deinterXXodd  = w.deinterXXodd
 	#w.deinterXXeven = w.deinterXXeven
 
+def helper_deinterlace0(w):
+	w['XX'] = w['XX'][::2,:] #take even column in a sweepback measurement
+
+def helper_deinterlace1(w):
+	w['XX'] = w['XX'][1::2,1:] #take odd column in a sweepback measurement
+	
+
 def helper_mov_avg(w):
 	(m, n) = (int(w['mov_avg_m']), int(w['mov_avg_n']))     # The shape of the window array
 	win = np.ones((m, n))
@@ -111,6 +118,8 @@ def helper_flipaxes(w):
 
 STYLE_FUNCS = {
 	'deinterlace': helper_deinterlace,
+	'deinterlace0': helper_deinterlace0,
+	'deinterlace1': helper_deinterlace1,
 	'didv': helper_didv,
 	'log': helper_log,
 	'normal': helper_normal,
@@ -132,6 +141,8 @@ as non-keyword arguments.
 '''
 STYLE_SPECS = {
 	'deinterlace': {'param_order': []},
+	'deinterlace0': {'param_order': []},
+	'deinterlace1': {'param_order': []},
 	'didv': {'param_order': []},
 	'log': {'param_order': []},
 	'normal': {'param_order': []},
