@@ -12,6 +12,7 @@ import matplotlib as mpl
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib import cm
 from matplotlib.widgets import Button
+from scipy.signal import argrelmax
 
 import pandas as pd
 import numpy as np
@@ -374,7 +375,6 @@ def buildLogicals(xs):
 		#empty list
 		yield slice(None) #return a 'semicolon' to select all the values when there's no value to filter on
 
-
 class plot3DSlices:
 	fig = None
 	data = []
@@ -383,6 +383,12 @@ class plot3DSlices:
 	exportDataMeta =[]
 	def show(self):
 		plt.show()
+
+	def autoColorScale(data):
+		values, edges = np.histogram(data, 100)
+		maxima = edges[argrelmax(values,order=20)]
+		cminlim , cmaxlim = maxima[0] , maxima[-1]
+		return (cminlim,cmaxlim)
 
 	def exportToMtx(self):
 
@@ -423,9 +429,7 @@ class plot3DSlices:
 			data.tofile(fid)
 			fid.close()
 
-
-
-	def __init__(self,data,n_index=None,meshgrid=False,hilbert=False,didv=False,fiddle=True,uniques_col_str=[],style='normal',clim=(0,0),aspect='auto',interpolation='none'):
+	def __init__(self,data,n_index=None,meshgrid=False,hilbert=False,didv=False,fiddle=True,uniques_col_str=[],style='normal',clim=(0,1),aspect='auto',interpolation='none'):
 		#uniques_col_str, array of names of the columns that are e.g. the slices of the
 		#style, 'normal,didv,didv2,log'
 		#clim, limits of the colorplot c axis
@@ -552,7 +556,7 @@ class plot3DSlices:
 #                 Z = griddata(x,y,Z,xi,yi)
 
 			self.XX = XX
-
+			
 			self.exportData.append(XX)
 			try:
 				m={
@@ -612,15 +616,17 @@ class plot3DSlices:
 				self.fig = plt.figure()
 				ax_deinter_odd  = plt.subplot(2, 1, 1)
 				w['deinterXXodd'] = np.rot90(w['deinterXXodd'])
-				ax_deinter_odd.imshow(w['deinterXXodd'],extent=ext, cmap=plt.get_cmap(self.ccmap),aspect=aspect,interpolation=interpolation)
+				ax_odd = ax_deinter_odd.imshow(w['deinterXXodd'],extent=ext, cmap=plt.get_cmap(self.ccmap),aspect=aspect,interpolation=interpolation)
 
 				ax_deinter_even = plt.subplot(2, 1, 2)
 				w['deinterXXeven'] = np.rot90(w['deinterXXeven'])
-				ax_deinter_even.imshow(w['deinterXXeven'],extent=ext, cmap=plt.get_cmap(self.ccmap),aspect=aspect,interpolation=interpolation)
+				ax_even = ax_deinter_even.imshow(w['deinterXXeven'],extent=ext, cmap=plt.get_cmap(self.ccmap),aspect=aspect,interpolation=interpolation)
 
 			self.im = ax.imshow(XX,extent=ext, cmap=plt.get_cmap(self.ccmap),aspect=aspect,interpolation=interpolation, norm=w['imshow_norm'])
-			if clim != (0,0):
-			   self.im.set_clim(clim)
+			if  clim == (0,1):
+				self.im.set_clim(autoColorScale(XX.flatten()))
+			elif clim != (0,0):
+			   	self.im.set_clim(clim)
 
 			if 'flipaxes' in style:
 				ax.set_xlabel(cols[-2])
@@ -707,7 +713,7 @@ class plotR:
 			print 'plot2d'
 			self.plot2d(**kwargs)		
 
-	def plot3d(self,fiddle=True,uniques_col_str=[],n_index=None,style='normal',clim=(0,0),aspect='auto',interpolation='none',**kwargs): #previously plot3dslices
+	def plot3d(self,fiddle=False,uniques_col_str=[],n_index=None,style='log',clim=(0,1),aspect='auto',interpolation='none',**kwargs): #previously plot3dslices
 		if not self.fig:
 			self.fig = plt.figure()
 		
@@ -860,8 +866,10 @@ class plotR:
 				ax_deinter_even.imshow(w['deinterXXeven'],extent=ext, cmap=plt.get_cmap(self.ccmap),aspect=aspect,interpolation=interpolation)
 
 			self.im = ax.imshow(XX,extent=ext, cmap=plt.get_cmap(self.ccmap),aspect=aspect,interpolation=interpolation, norm=w['imshow_norm'])
-			if clim != (0,0):
-			   self.im.set_clim(clim)
+			if  clim == (0,1):
+				self.im.set_clim(autoColorScale(XX.flatten()))
+			elif clim != (0,0):
+			   	self.im.set_clim(clim)
 
 			if 'flipaxes' in style:
 				ax.set_xlabel(cols[-2])
