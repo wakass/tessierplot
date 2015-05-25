@@ -68,6 +68,14 @@ def helper_didv(w):
 	w['cbar_unit'] = '$\mu$Siemens'
 	w['cbar_unit'] = r'$\mathrm{e}^2/\mathrm{h}$'
 
+def helper_sgdidv(w):
+	'''Perform Savitzky-Golay smoothing and get 1st derivative'''
+	w['XX'] = signal.savgol_filter(
+			w['XX'], int(w['sgdidv_samples']), int(w['sgdidv_order']), deriv=1, delta=w['ystep'] / 0.0129064037)
+	w['cbar_quantity'] = 'dI/dV'
+	w['cbar_unit'] = '$\mu$Siemens'
+	w['cbar_unit'] = r'$\mathrm{e}^2/\mathrm{h}$'
+
 def helper_log(w):
 	w['XX'] = np.log10(np.abs(w['XX']))
 	w['cbar_trans'] = ['log$_{10}$','abs'] + w['cbar_trans']
@@ -127,6 +135,7 @@ STYLE_FUNCS = {
 	'mov_avg': helper_mov_avg,
 	'abs': helper_abs,
 	'savgol': helper_savgol,
+	'sgdidv': helper_sgdidv,
 	'fancylog': helper_fancylog,
 	'minsubtract': helper_minsubtract
 }
@@ -149,7 +158,8 @@ STYLE_SPECS = {
 	'flipaxes': {'param_order': []},
 	'mov_avg': {'m': 1, 'n': 5, 'win': None, 'param_order': ['m', 'n', 'win']},
 	'abs': {'param_order': []},
-	'savgol': {'samples': 3, 'order': 1, 'param_order': ['samples', 'order']},
+	'savgol': {'samples': 11, 'order': 3, 'param_order': ['samples', 'order']},
+	'sgdidv': {'samples': 11, 'order': 3, 'param_order': ['samples', 'order']},
 	'fancylog': {'cmin': None, 'cmax': None, 'param_order': ['cmin', 'cmax']},
 	'minsubtract': {'param_order': []}
 }
