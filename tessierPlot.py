@@ -384,10 +384,17 @@ class plot3DSlices:
 	def show(self):
 		plt.show()
 
-	def autoColorScale(data):
-		values, edges = np.histogram(data, 100)
-		maxima = edges[argrelmax(values,order=20)]
-		cminlim , cmaxlim = maxima[0] , maxima[-1]
+	def autoColorScale(self, data):
+		values, edges = np.histogram(data, 256)
+		maxima = edges[argrelmax(values,order=32)]
+		print 'maxima=',maxima
+		#print 'maxima size=',maxima.size
+		#print maxima[0] , maxima[-1]
+		print np.min(data) , np.max(data)
+		if maxima.size>0: 
+			cminlim , cmaxlim = maxima[0] , np.max(data)
+		else:
+			cminlim , cmaxlim = np.min(data) , np.max(data)
 		return (cminlim,cmaxlim)
 
 	def exportToMtx(self):
@@ -429,7 +436,7 @@ class plot3DSlices:
 			data.tofile(fid)
 			fid.close()
 
-	def __init__(self,data,n_index=None,meshgrid=False,hilbert=False,didv=False,fiddle=True,uniques_col_str=[],style='normal',clim=(0,1),aspect='auto',interpolation='none'):
+	def __init__(self,data,n_index=None,meshgrid=False,hilbert=False,didv=False,fiddle=True,uniques_col_str=[],style='log',clim='auto',aspect='auto',interpolation='none'):
 		#uniques_col_str, array of names of the columns that are e.g. the slices of the
 		#style, 'normal,didv,didv2,log'
 		#clim, limits of the colorplot c axis
@@ -580,9 +587,16 @@ class plot3DSlices:
 			if didv: #some backwards compatibility
 			   style = 'didv'
 
+				
+
 			if type(style) != list:
 				style = list([style])
 				#print(style)
+
+			#autodeinterlace function
+			if y[yu-1]==y[yu]: style.append('deinterlace0')	
+			#autodidv function
+			if (max(y) == -1*min(y) and max(y) <= 150) : style.insert(0,'sgdidv')	
 
 			#smooth the datayesplz
 			#import scipy.ndimage as ndimage
@@ -623,8 +637,8 @@ class plot3DSlices:
 				ax_even = ax_deinter_even.imshow(w['deinterXXeven'],extent=ext, cmap=plt.get_cmap(self.ccmap),aspect=aspect,interpolation=interpolation)
 
 			self.im = ax.imshow(XX,extent=ext, cmap=plt.get_cmap(self.ccmap),aspect=aspect,interpolation=interpolation, norm=w['imshow_norm'])
-			if  clim == (0,1):
-				self.im.set_clim(autoColorScale(XX.flatten()))
+			if  clim == ('auto' or 'Auto' or (0,1)):
+				self.im.set_clim(self.autoColorScale(XX.flatten()))
 			elif clim != (0,0):
 			   	self.im.set_clim(clim)
 
@@ -634,6 +648,7 @@ class plot3DSlices:
 			else:
 				ax.set_xlabel(cols[-3])
 				ax.set_ylabel(cols[-2])
+
 
 
 			title = ''
@@ -664,10 +679,10 @@ class plot3DSlices:
 
 		if fiddle and (mpl.get_backend() == 'Qt4Agg' or 'nbAgg'):
 			self.fiddle = Fiddle(self.fig)
-			axFiddle = plt.axes([0.1, 0.85, 0.15, 0.075])
+			axFiddle = cbar.ax#plt.axes([0.1, 0.85, 0.15, 0.075])
 
 
-			self.bnext = Button(axFiddle, 'Fiddle')
+			self.bnext = Button(axFiddle, '')
 			self.bnext.on_clicked(self.fiddle.connect)
 
 			#attach to the relevant figure to make sure the object does not go out of scope
@@ -678,7 +693,7 @@ class plot3DSlices:
 
 
 class plotR:
-	def __init__(self,file,fiddle=True):
+	def __init__(self,file):
 		self.header = None
 		self.names = None
 		self.fig = None
@@ -713,7 +728,16 @@ class plotR:
 			print 'plot2d'
 			self.plot2d(**kwargs)		
 
-	def plot3d(self,fiddle=False,uniques_col_str=[],n_index=None,style='log',clim=(0,1),aspect='auto',interpolation='none',**kwargs): #previously plot3dslices
+	def autoColorScale(self,data):
+		values, edges = np.histogram(data, 256)
+		maxima = edges[argrelmax(values,order=32)]
+		if maxima.size>0: 
+			cminlim , cmaxlim = maxima[0] , np.max(data)
+		else:
+			cminlim , cmaxlim = np.min(data) , np.max(data)
+		return (cminlim,cmaxlim)
+
+	def plot3d(self,fiddle=True,uniques_col_str=[],n_index=None,style='log',clim='auto',aspect='auto',interpolation='none',**kwargs): #previously plot3dslices
 		if not self.fig:
 			self.fig = plt.figure()
 		
@@ -767,7 +791,7 @@ class plotR:
 
 			xu = np.size(x.unique())
 			yu = np.size(y.unique())
-
+			
 
 			## if the measurement is not complete this will probably fail so trim of the final sweep?
 			print('xu: {:d}, yu: {:d}, lenz: {:d}'.format(xu,yu,len(z)))
@@ -805,8 +829,7 @@ class plotR:
 			xstep = (xlims[0] - xlims[1])/xu
 			ystep = (ylims[0] - ylims[1])/yu
 			ext = xlims+ylims
-
-
+			
 			self.XX = XX
 			
 			self.exportData.append(XX)
@@ -828,9 +851,15 @@ class plotR:
 			ax = plt.subplot(nplots, 1, cnt+1)
 			cbar_title = ''
 			
+
 			
 			if type(style) != list:
 				style = list([style])
+
+			#autodeinterlace function
+			if y[yu-1]==y[yu]: style.append('deinterlace0')
+			#autodidv function
+			if (max(y) == -1*min(y) and max(y) <= 150) : style.insert(0,'sgdidv')
 
 			measAxisDesignation = parseUnitAndNameFromColumnName(self.data.keys()[-1])
 			#wrap all needed arguments in a datastructure
@@ -842,6 +871,9 @@ class plotR:
 			w2 = {'ext':ext, 'ystep':ystep,'XX': XX, 'cbar_quantity': cbar_quantity, 'cbar_unit': cbar_unit, 'cbar_trans':cbar_trans}
 			for k in w2:
 				w[k] = w2[k]
+
+
+
 			tstyle.processStyle(style, w)
 
 			#unwrap
@@ -866,8 +898,8 @@ class plotR:
 				ax_deinter_even.imshow(w['deinterXXeven'],extent=ext, cmap=plt.get_cmap(self.ccmap),aspect=aspect,interpolation=interpolation)
 
 			self.im = ax.imshow(XX,extent=ext, cmap=plt.get_cmap(self.ccmap),aspect=aspect,interpolation=interpolation, norm=w['imshow_norm'])
-			if  clim == (0,1):
-				self.im.set_clim(autoColorScale(XX.flatten()))
+			if  clim == ('auto' or 'Auto'):
+				self.im.set_clim(self.autoColorScale(XX.flatten()))
 			elif clim != (0,0):
 			   	self.im.set_clim(clim)
 
@@ -899,11 +931,12 @@ class plotR:
 			plt.tight_layout()
 
 			cnt+=1 #counter for subplots
-		self.toggleFiddle()
+		if fiddle: self.toggleFiddle()
 	
-	def plot2d(self,n_index=None,style=['normal'],**kwargs): #previously scanplot
-# 		scanplot(file,fig=None,n_index=None,style=[],data=None,**kwargs):
-		#kwargs go into matplotlib/pyplot plot command
+	def plot2d(self,fiddle=False,n_index=None,style=['normal'],**kwargs): #previously scanplot
+		# scanplot(file,fig=None,n_index=None,style=[],data=None,**kwargs):
+		# kwargs go into matplotlib/pyplot plot command
+		# fiddle for compatibility with tessierView only
 		
 		if not self.fig:
 			self.fig = plt.figure()
@@ -1003,10 +1036,10 @@ class plotR:
 		
 		if (mpl.get_backend() == 'Qt4Agg' or 'nbAgg'):
 			self.fiddle = Fiddle(self.fig)
-			axFiddle = plt.axes([0.1, 0.85, 0.15, 0.075])
+			axFiddle = self.fig.axes[-1]#plt.axes([0.1, 0.85, 0.15, 0.075])
 
 
-			self.bnext = Button(axFiddle, 'Fiddle')
+			self.bnext = Button(axFiddle, '')
 			self.bnext.on_clicked(self.fiddle.connect)
 
 			#attach to the relevant figure to make sure the object does not go out of scope
