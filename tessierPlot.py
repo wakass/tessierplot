@@ -930,7 +930,7 @@ class plotR:
 			cbar = self.cbar
 
 			cbar.set_label(cbar_title)
-			plt.tight_layout()
+# 			plt.tight_layout()
 
 			cnt+=1 #counter for subplots
 

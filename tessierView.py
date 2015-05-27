@@ -221,5 +221,5 @@ class tessierView(object):
         </style>
         """
         temp = jj.Template(out)
-        plotcommand = """import tessierPlot as ts; p = ts.plotR(file); p.quickplot(style=\[\\'minsubtract\\'\] + %s) """      
-        return temp.render(items=all_relative,plotcommand=plotcommand)
+        plotcommand = """import tessierPlot as ts; reload(ts); p = ts.plotR(file); p.quickplot(style= %s) """      
+        return temp.render(items=all_relative,plotcommand=plotcommand)#\[\\'minsubtract\\'\] +
