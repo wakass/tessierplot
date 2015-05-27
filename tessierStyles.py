@@ -32,6 +32,13 @@ def helper_deinterlace(w):
 	#w.deinterXXodd  = w.deinterXXodd
 	#w.deinterXXeven = w.deinterXXeven
 
+def helper_deinterlace0(w):
+	w['XX'] = w['XX'][::2,:] #take even column in a sweepback measurement
+
+def helper_deinterlace1(w):
+	w['XX'] = w['XX'][1::2,1:] #take odd column in a sweepback measurement
+	
+
 def helper_mov_avg(w):
 	(m, n) = (int(w['mov_avg_m']), int(w['mov_avg_n']))     # The shape of the window array
 	win = np.ones((m, n))
@@ -57,6 +64,14 @@ def helper_didv(w):
 	w['XX'] = np.diff(w['XX'],axis=1)
 	#1 nA / 1 mV = 0.0129064037 conductance quanta
 	w['XX'] = w['XX'] / w['ystep'] * 0.0129064037
+	w['cbar_quantity'] = 'dI/dV'
+	w['cbar_unit'] = '$\mu$Siemens'
+	w['cbar_unit'] = r'$\mathrm{e}^2/\mathrm{h}$'
+
+def helper_sgdidv(w):
+	'''Perform Savitzky-Golay smoothing and get 1st derivative'''
+	w['XX'] = signal.savgol_filter(
+			w['XX'], int(w['sgdidv_samples']), int(w['sgdidv_order']), deriv=1, delta=w['ystep'] / 0.0129064037)
 	w['cbar_quantity'] = 'dI/dV'
 	w['cbar_unit'] = '$\mu$Siemens'
 	w['cbar_unit'] = r'$\mathrm{e}^2/\mathrm{h}$'
@@ -111,6 +126,8 @@ def helper_flipaxes(w):
 
 STYLE_FUNCS = {
 	'deinterlace': helper_deinterlace,
+	'deinterlace0': helper_deinterlace0,
+	'deinterlace1': helper_deinterlace1,
 	'didv': helper_didv,
 	'log': helper_log,
 	'normal': helper_normal,
@@ -118,6 +135,7 @@ STYLE_FUNCS = {
 	'mov_avg': helper_mov_avg,
 	'abs': helper_abs,
 	'savgol': helper_savgol,
+	'sgdidv': helper_sgdidv,
 	'fancylog': helper_fancylog,
 	'minsubtract': helper_minsubtract
 }
@@ -132,13 +150,16 @@ as non-keyword arguments.
 '''
 STYLE_SPECS = {
 	'deinterlace': {'param_order': []},
+	'deinterlace0': {'param_order': []},
+	'deinterlace1': {'param_order': []},
 	'didv': {'param_order': []},
 	'log': {'param_order': []},
 	'normal': {'param_order': []},
 	'flipaxes': {'param_order': []},
 	'mov_avg': {'m': 1, 'n': 5, 'win': None, 'param_order': ['m', 'n', 'win']},
 	'abs': {'param_order': []},
-	'savgol': {'samples': 3, 'order': 1, 'param_order': ['samples', 'order']},
+	'savgol': {'samples': 11, 'order': 3, 'param_order': ['samples', 'order']},
+	'sgdidv': {'samples': 11, 'order': 3, 'param_order': ['samples', 'order']},
 	'fancylog': {'cmin': None, 'cmax': None, 'param_order': ['cmin', 'cmax']},
 	'minsubtract': {'param_order': []}
 }
