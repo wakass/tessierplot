@@ -34,6 +34,43 @@ rcP = {  'figure.figsize': (_plot_width, _plot_height), #(width in inch, height 
 rcP_old = pylab.rcParams.copy()
 
 # pylab.rcParams['legend.linewidth'] = 10
+def getthumbcachepath(file):
+    oneupdir = os.path.abspath(os.path.join(os.path.dirname(file),os.pardir))
+    datedir = os.path.split(oneupdir)[1] #directory name should be datedir, if not 
+    if re.match('[0-9]{8}',datedir):
+        preid= datedir
+    else:
+        preid = ''
+    
+    #relative to project/working directory
+    cachepath = os.path.normpath(os.path.join(os.getcwd(),'thumbnails', preid + '_'+os.path.splitext(os.path.split(file)[1])[0] + '_thumb.png'))
+    return cachepath
+    
+def getthumbdatapath(file):
+    thumbdatapath = os.path.splitext(file)[0] + '_thumb.png'
+    return thumbdatapath
+
+
+def overridethumbnail(file, fig):
+##Todo, copy thumbs on the fly from their working directories, thus negating having to recheck..the..data..file?
+    #create a thumbnail and store it in the same directory and in the thumbnails dir for local file serving, override options for if file already exists
+    thumbfile = getthumbcachepath(file)
+    thumbfile_datadir =  getthumbdatapath(file)
+    try:
+        pylab.rcParams.update(rcP)
+        fig.savefig(thumbfile,bbox_inches='tight' )
+        fig.savefig(thumbfile_datadir,bbox_inches='tight' )
+        plt.close(fig)
+    except Exception,e:
+        thumbfile = None #if fail no thumbfile was created
+        print 'Error {:s} for file {:s}'.format(e,file)
+        pass
+        
+    #put back the old settings
+    pylab.rcParams = rcP_old
+
+    return thumbfile
+
 
 class tessierView(object):
     def __init__(self, rootdir, filemask='.*\.dat$',filterstring=''):
@@ -44,33 +81,17 @@ class tessierView(object):
     def on(self):   
         print 'You are now watching through the glasses of ideology'
         display(VimeoVideo('106036638'))
-        
-    def getthumbcachepath(self,file):
-        oneupdir = os.path.abspath(os.path.join(os.path.dirname(file),os.pardir))
-        datedir = os.path.split(oneupdir)[1] #directory name should be datedir, if not 
-        if re.match('[0-9]{8}',datedir):
-            preid= datedir
-        else:
-            preid = ''
-        
-        #relative to project/working directory
-        cachepath = os.path.normpath(os.path.join(os.getcwd(),'thumbnails', preid + '_'+os.path.splitext(os.path.split(file)[1])[0] + '_thumb.png'))
-        return cachepath
-        
-    def getthumbdatapath(self,file):
-        thumbdatapath = os.path.splitext(file)[0] + '_thumb.png'
-        return thumbdatapath
-    
+          
     def getsetfilepath(self,file):
         return (os.path.splitext(file)[0] + '.set')
-    
-    def makethumbnail(self,file,override=False):
+
+    def makethumbnail(self, file,override=False):
     ##Todo, copy thumbs on the fly from their working directories, thus negating having to recheck..the..data..file?
-    
-    
+
+
         #create a thumbnail and store it in the same directory and in the thumbnails dir for local file serving, override options for if file already exists
-        thumbfile = self.getthumbcachepath(file)
-        thumbfile_datadir =  self.getthumbdatapath(file)
+        thumbfile = getthumbcachepath(file)
+        thumbfile_datadir =  getthumbdatapath(file)
         try:
             if ((not os.path.exists(thumbfile)) or override):
                 #now make thumbnail because it doesnt exist or if u need to refresh
@@ -79,7 +100,7 @@ class tessierView(object):
                 p = ts.plotR(file)
                 if len(p.data) > 20: ##just make sure really unfinished measurements are thrown out
                     p.quickplot() #make quickplot more intelligent so it detect dimensionality from uniques
-#                     p.fig.subplots_adjust(top=0.9, bottom=0.15, left=0.15, right=0.85,hspace=0.0)
+    #                     p.fig.subplots_adjust(top=0.9, bottom=0.15, left=0.15, right=0.85,hspace=0.0)
                     p.fig.savefig(thumbfile,bbox_inches='tight' )
                     p.fig.savefig(thumbfile_datadir,bbox_inches='tight' )
                     plt.close(p.fig)
@@ -92,9 +113,8 @@ class tessierView(object):
             
         #put back the old settings
         pylab.rcParams = rcP_old
-   
-        return thumbfile
-    
+
+        return thumbfile  
     
     def walk(self,filemask,filterstring,**kwargs):
         paths = (self._root,)
@@ -144,9 +164,9 @@ class tessierView(object):
             </div>
             <div class='controls'>
             <button id='{{ item.datapath }}' onClick='plot(this.id,"&#91;&#93;","dsf")'>Normal</button>
-            <button id='{{ item.datapath }}' onClick='plot(this.id,"{{"[\\'abs\\',\\'log\\']"|e}}","dsf")'>Log</button>
-            <button id='{{ item.datapath }}' onClick='plot(this.id,"{{"[\\'savgol\\',\\'didv\\',\\'abs\\']"|e}}","dsf")'>dIdV</button>
-            <button id='{{ item.datapath }}' onClick='plot(this.id,"{{" [\\'savgol\\',\\'didv\\',\\'log\\']"|e}} ","dsf")'>Log(dIdV)</button>
+            <button id='{{ item.datapath }}' onClick='plot(this.id,"{{"[\\'savgol\\',\\'log\\']"|e}}","dsf")'>Log</button>
+            <button id='{{ item.datapath }}' onClick='plot(this.id,"{{"[\\'sgdidv\\']"|e}}","dsf")'>dIdV</button>
+            <button id='{{ item.datapath }}' onClick='plot(this.id,"{{" [\\'sgdidv\\',\\'log\\']"|e}} ","dsf")'>Log(dIdV)</button>
             <button id='{{ item.datapath }}' onClick='tovar(this.id)'>toVar ('file')</button>
             <br/>
             <button id='{{ item.datapath }}' onClick='plot(this.id,"{{" [\\'deinterlace\\']"|e}} ","dsf")'>Deinterlace</button>
@@ -213,11 +233,13 @@ class tessierView(object):
         
         <style type="text/css">
         @media (min-width: 30em) {
-            .row { width: 100%; display: table; table-layout: fixed; }
-            .col { display: table-cell;  width: 100%;  }
+            .row { width: auto; display: table; table-layout: fixed; }
+            .col { display: table-cell;  width: auto;  }
         }
         </style>
         """
         temp = jj.Template(out)
-        plotcommand = """import tessierPlot as ts; p = ts.plotR(file); p.quickplot(style=\[\\'minsubtract\\'\] + %s) """      
+        #plotcommand = """import tessierPlot as ts; import tessierView as tv; p = ts.plotR(file); 
+        #p.quickplot(); p.fig.canvas.mpl_connect(\\'close_event\\', ts.plotR.savefig) """  
+        plotcommand = """import tessierPlot as ts; ts.tvButtons(file, style=\[\] +%s);     """
         return temp.render(items=all_relative,plotcommand=plotcommand)
