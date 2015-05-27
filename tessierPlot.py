@@ -865,6 +865,7 @@ class plotR:
 				ax_deinter_even.imshow(w['deinterXXeven'],extent=ext, cmap=plt.get_cmap(self.ccmap),aspect=aspect,interpolation=interpolation)
 
 			self.im = ax.imshow(XX,extent=ext, cmap=plt.get_cmap(self.ccmap),aspect=aspect,interpolation=interpolation, norm=w['imshow_norm'])
+
 			if clim != (0,0):
 			   self.im.set_clim(clim)
 
@@ -896,6 +897,7 @@ class plotR:
 
 			cnt+=1 #counter for subplots
 		self.toggleFiddle()
+		return self.fig
 	
 	def plot2d(self,n_index=None,style=['normal'],**kwargs): #previously scanplot
 # 		scanplot(file,fig=None,n_index=None,style=[],data=None,**kwargs):
@@ -910,7 +912,7 @@ class plotR:
 	
 		uniques_col = []
 	
-		#scanplot assumes 2d plots with data in the two last columns
+		#assume 2d plots with data in the two last columns
 		uniques_col_str = [i['name'] for i in self.header if i['type']=='coordinate' ][:-1]    
 	
 		reg = re.compile(r'\{(.*?)\}')
@@ -950,7 +952,7 @@ class plotR:
 			tstyle.processStyle(style,wrap)
 			ax = plt.plot(x,wrap['XX'],label=title,**kwargs)
 				
-			
+		
 		plt.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3,
 			   ncol=2, mode="expand", borderaxespad=0.)
 		ax = self.fig.axes[0]
