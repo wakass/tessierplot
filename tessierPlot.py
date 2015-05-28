@@ -6,8 +6,6 @@
 
 import matplotlib.pyplot as plt
 import matplotlib as mpl
-#mpl.use('Qt4Agg')
-
 
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib import cm
@@ -25,10 +23,19 @@ import tessierStyles as tstyle
 from imp import reload #DEBUG
 reload(tstyle) #DEBUG
 
-import IPython  
-ipy=IPython.get_ipython()
-ipy.magic("pylab qt")
 
+##Only load this part on first import, calling this on reload has dire consequences
+## Note: there is still a bug where closing a previously plotted window and plotting another plot causes the window and the kernel to hang
+try:
+	magichappened
+except:
+	import IPython  
+	ipy=IPython.get_ipython()
+	ipy.magic("pylab qt")
+	magichappened = False
+else:
+	print 'else'
+	magichappened = True
 
 
 from mpl_toolkits.axes_grid1 import make_axes_locatable
@@ -319,31 +326,15 @@ def scanplot(file,fig=None,n_index=None,style=[],data=None,**kwargs):
 
 def loadFile(file,names=['L','B1','B2','vsd','zz'],skiprows=0):
 	#print('loading...')
-	data = pd.read_csv(file, skip_blank_lines=True, sep='\t', comment='#',skiprows=skiprows,names=names)
+	data = pd.read_csv(file, sep='\t', comment='#',skiprows=skiprows,names=names)
 	data.name = file
 	return data
 
 def loadCustomColormap(file='./cube1.txt'):
 	do = np.loadtxt(file)
-
 	ccmap = mpl.colors.LinearSegmentedColormap.from_list('name',do)
 	return ccmap
 
-def demoCustomColormap():
-	ccmap = loadCustomColormap()
-	a = np.linspace(0, 1, 256).reshape(1,-1)
-	a = np.vstack((a,a))
-	fig = plt.figure()
-	plt.imshow(a, aspect='auto', cmap=plt.get_cmap(ccmap), origin='lower')
-	plt.show()
-
-
-def moving_average(a, n=3) :
-	ret = np.cumsum(a, dtype=float)
-	ret[n:] = ret[n:] - ret[:-n]
-	return ret[n - 1:] / n
-
-from scipy.signal import lfilter, lfilter_zi, filtfilt, butter
 import math
 
 
@@ -807,7 +798,7 @@ class plotR:
 
 			#sorting sorts negative to positive, so beware:
 			#sweep direction determines which part of array should be cut off
-			if sweepdirection:
+			if not sweepdirection:
 				z = z[-xu*yu:]
 				x = x[-xu*yu:]
 				y = y[-xu*yu:]
@@ -856,8 +847,11 @@ class plotR:
 			if type(style) != list:
 				style = list([style])
 
-			#autodeinterlace function
-			if y[yu-1]==y[yu]: style.append('deinterlace0')
+# 			#autodeinterlace function
+# 			if y[yu-1]==y[yu]: style.append('deinterlace0')
+# does not work properly due to not plotting both deinterlaced, gives problems with star measurements e.g. 
+
+
 			#autodidv function
 			if (max(y) == -1*min(y) and max(y) <= 150) : style.insert(0,'sgdidv')
 
