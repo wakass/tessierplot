@@ -35,7 +35,6 @@ except:
 	ipy.magic("pylab qt")
 	magichappened = False
 else:
-	print 'else'
 	magichappened = True
 
 from mpl_toolkits.axes_grid1 import make_axes_locatable
@@ -325,7 +324,6 @@ def scanplot(file,fig=None,n_index=None,style=[],data=None,**kwargs):
 	return fig
 
 def loadFile(file,names=['L','B1','B2','vsd','zz'],skiprows=0):
-	#print('loading...')
 	data = pd.read_csv(file, sep='\t', comment='#',skiprows=skiprows,names=names)
 	data.name = file
 	return data
@@ -359,7 +357,6 @@ def buildLogicals(xs):
 	elif len(xs) == 1:
 		for i in xs[0].unique():
 			if (math.isnan(i)):
-				#print('NaN found, skipping')
 				continue
 			yield xs[0] == i
 	else:
@@ -378,10 +375,6 @@ class plot3DSlices:
 	def autoColorScale(self, data):
 		values, edges = np.histogram(data, 256)
 		maxima = edges[argrelmax(values,order=24)]
-		print 'maxima=',maxima
-		#print 'maxima size=',maxima.size
-		#print maxima[0] , maxima[-1]
-		print np.min(data) , np.max(data)
 		if maxima.size>0: 
 			cminlim , cmaxlim = maxima[0] , np.max(data)
 		else:
@@ -440,8 +433,6 @@ class plot3DSlices:
 		# 0 value for plotting all
 		
 		
-
-		print('sorting...')
 		cols = data.columns.tolist()
 		filterdata = data.sort(cols[:-1])
 		filterdata = filterdata.dropna(how='any')
@@ -570,7 +561,6 @@ class plot3DSlices:
 				self.exportDataMeta = np.append(self.exportDataMeta,m)
 			except:
 				pass
-			print('plotting...')
 
 			ax = plt.subplot(nplots, 1, cnt+1)
 			cbar_title = ''
@@ -582,7 +572,6 @@ class plot3DSlices:
 
 			if type(style) != list:
 				style = list([style])
-				#print(style)
 
 			#autodeinterlace function
 			if y[yu-1]==y[yu]: style.append('deinterlace1')	
@@ -645,7 +634,6 @@ class plot3DSlices:
 			title = ''
 			for i in uniques_col_str:
 				title = '\n'.join([title, '{:s}: {:g} (mV)'.format(i,getattr(slicy,i).iloc[0])])
-			print(title)
 			if 'notitle' not in style:
 				ax.set_title(title)
 			# create an axes on the right side of ax. The width of cax will be 5%
@@ -698,7 +686,6 @@ class tvButtons:
 		self.thumbfile_datadir = tv.getthumbdatapath(self.file)
 		print(style)
 		p.quickplot(style=style)
-		print(p.fig)
 		p.fig.canvas.mpl_connect('close_event', self.savefig)
 
 class plotR:
@@ -731,17 +718,13 @@ class plotR:
 		uniques_col_str = coords[filter]
 
 		if len(coords[filter_neg]) > 1: 
-			print 'plot3d'
 			self.plot3d(uniques_col_str=uniques_col_str,**kwargs)
 		else:
-			print 'plot2d'
 			self.plot2d(**kwargs)		
 
 	def autoColorScale(self,data):
 		values, edges = np.histogram(data, 256)
 		maxima = edges[argrelmax(values,order=24)]
-		print 'maxima size=',maxima.size
-		print maxima[0] , maxima[-1]
 		if maxima.size>0: 
 			cminlim , cmaxlim = maxima[0] , np.max(data)
 		else:
@@ -753,7 +736,6 @@ class plotR:
 			self.fig = plt.figure()
 		
 		if self.data is None:
-			print('loading')
 			self.loadFile(file)
 			
 		cols = self.data.columns.tolist()
@@ -930,7 +912,6 @@ class plotR:
 			title = ''
 			for i in uniques_col_str:
 				title = '\n'.join([title, '{:s}: {:g} (mV)'.format(i,getattr(slicy,i).iloc[0])])
-			print(type(self.fig))
 			print(title)
 			if 'notitle' not in style:
 				ax.set_title(title)
@@ -961,7 +942,6 @@ class plotR:
 			self.fig = plt.figure()
 		
 		if self.data is None:
-			print('loading')
 			self.loadFile(file)
 	
 		uniques_col = []
