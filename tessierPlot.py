@@ -15,6 +15,7 @@ from scipy.signal import argrelmax
 import pandas as pd
 import numpy as np
 import math
+import tessierView as tv
 
 import re
 import os
@@ -36,7 +37,6 @@ except:
 else:
 	print 'else'
 	magichappened = True
-
 
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
@@ -377,7 +377,7 @@ class plot3DSlices:
 
 	def autoColorScale(self, data):
 		values, edges = np.histogram(data, 256)
-		maxima = edges[argrelmax(values,order=32)]
+		maxima = edges[argrelmax(values,order=24)]
 		print 'maxima=',maxima
 		#print 'maxima size=',maxima.size
 		#print maxima[0] , maxima[-1]
@@ -585,7 +585,7 @@ class plot3DSlices:
 				#print(style)
 
 			#autodeinterlace function
-			if y[yu-1]==y[yu]: style.append('deinterlace0')	
+			if y[yu-1]==y[yu]: style.append('deinterlace1')	
 			#autodidv function
 			if (max(y) == -1*min(y) and max(y) <= 150) : style.insert(0,'sgdidv')	
 
@@ -681,7 +681,25 @@ class plot3DSlices:
 			self.fig.bnext = self.bnext
 		#plt.show()
 
-
+class tvButtons:
+	def savefig(self,evt): 
+		thumbfile = self.thumbfile
+		thumbfile_datadir = self.thumbfile_datadir
+		p = self.p
+		p.fig.savefig(thumbfile,bbox_inches='tight' )
+		p.fig.savefig(thumbfile_datadir,bbox_inches='tight' )
+        #tv.overridethumbnail(self.file, self.fig)
+	
+	def __init__(self,file, style):
+		self.file = file
+		p = plotR(file)
+		self.p = p
+		self.thumbfile = tv.getthumbcachepath(self.file)
+		self.thumbfile_datadir = tv.getthumbdatapath(self.file)
+		print(style)
+		p.quickplot(style=style)
+		print(p.fig)
+		p.fig.canvas.mpl_connect('close_event', self.savefig)
 
 class plotR:
 	def __init__(self,file):
@@ -699,7 +717,7 @@ class plotR:
 		self.dims = self.getdimFromData()
 		self.bControls = True #boolean controlling state of plot manipulation buttons
 		
-		
+
 	def quickplot(self,**kwargs):
 		nDim = self.ndim
 		#if the uniques of a dimension is less than x, plot in consequential 2d, otherwise 3d
@@ -721,7 +739,9 @@ class plotR:
 
 	def autoColorScale(self,data):
 		values, edges = np.histogram(data, 256)
-		maxima = edges[argrelmax(values,order=32)]
+		maxima = edges[argrelmax(values,order=24)]
+		print 'maxima size=',maxima.size
+		print maxima[0] , maxima[-1]
 		if maxima.size>0: 
 			cminlim , cmaxlim = maxima[0] , np.max(data)
 		else:
@@ -847,10 +867,10 @@ class plotR:
 			if type(style) != list:
 				style = list([style])
 
+
 # 			#autodeinterlace function
 # 			if y[yu-1]==y[yu]: style.append('deinterlace0')
 # does not work properly due to not plotting both deinterlaced, gives problems with star measurements e.g. 
-
 
 			#autodidv function
 			if (max(y) == -1*min(y) and max(y) <= 150) : style.insert(0,'sgdidv')
@@ -910,6 +930,7 @@ class plotR:
 			title = ''
 			for i in uniques_col_str:
 				title = '\n'.join([title, '{:s}: {:g} (mV)'.format(i,getattr(slicy,i).iloc[0])])
+			print(type(self.fig))
 			print(title)
 			if 'notitle' not in style:
 				ax.set_title(title)
