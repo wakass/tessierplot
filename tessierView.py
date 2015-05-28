@@ -72,7 +72,9 @@ class tessierView(object):
         thumbfile = self.getthumbcachepath(file)
         thumbfile_datadir =  self.getthumbdatapath(file)
         try:
-            if ((not os.path.exists(thumbfile)) or override):
+            if os.path.exists(thumbfile):
+                thumbnailStale = os.path.getmtime(thumbfile) < os.path.getmtime(file)   #check modified date with file modified date, if file is newer than thumbfile refresh the thumbnail
+            if ((not os.path.exists(thumbfile)) or override or thumbnailStale):
                 #now make thumbnail because it doesnt exist or if u need to refresh
                 pylab.rcParams.update(rcP)
 
