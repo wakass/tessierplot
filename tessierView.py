@@ -73,7 +73,7 @@ def overridethumbnail(file, fig):
 
 
 class tessierView(object):
-    def __init__(self, rootdir, filemask='.*\.dat$',filterstring=''):
+    def __init__(self, rootdir='./', filemask='.*\.dat$',filterstring=''):
         self._root = rootdir
         self._filemask = filemask
         self._filterstring = filterstring
@@ -85,13 +85,11 @@ class tessierView(object):
     def getsetfilepath(self,file):
         return (os.path.splitext(file)[0] + '.set')
 
-    def makethumbnail(self, file,override=False):
-    ##Todo, copy thumbs on the fly from their working directories, thus negating having to recheck..the..data..file?
-
-
+    def makethumbnail(self, file,override=False,style=[]):
         #create a thumbnail and store it in the same directory and in the thumbnails dir for local file serving, override options for if file already exists
         thumbfile = getthumbcachepath(file)
         thumbfile_datadir =  getthumbdatapath(file)
+
         try:
             if os.path.exists(thumbfile):
                 thumbnailStale = os.path.getmtime(thumbfile) < os.path.getmtime(file)   #check modified date with file modified date, if file is newer than thumbfile refresh the thumbnail
@@ -101,9 +99,7 @@ class tessierView(object):
 
                 p = ts.plotR(file)
                 if len(p.data) > 20: ##just make sure really unfinished measurements are thrown out
-                    
-                    p.quickplot() #make quickplot more intelligent so it detect dimensionality from uniques
-    #                     p.fig.subplots_adjust(top=0.9, bottom=0.15, left=0.15, right=0.85,hspace=0.0)
+                    p.quickplot(style=style) 
                     p.fig.savefig(thumbfile,bbox_inches='tight' )
                     p.fig.savefig(thumbfile_datadir,bbox_inches='tight' )
                     plt.close(p.fig)
@@ -155,6 +151,11 @@ class tessierView(object):
     
         # print all_relative
         out=u"""
+
+        <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+        <meta http-equiv="Pragma" content="no-cache"> 
+        <meta http-equiv="Expires" content="0">
+        
         <div>
     {% for item in items %}
 
@@ -167,13 +168,25 @@ class tessierView(object):
             <img src="{{ item.thumbpath }}"/> 
             </div>
             <div class='controls'>
-            <button id='{{ item.datapath }}' onClick='plot(this.id,"&#91;&#93;","dsf")'>Normal</button>
-            <button id='{{ item.datapath }}' onClick='plot(this.id,"{{"[\\'savgol\\',\\'log\\']"|e}}","dsf")'>Log</button>
-            <button id='{{ item.datapath }}' onClick='plot(this.id,"{{"[\\'sgdidv\\']"|e}}","dsf")'>dIdV</button>
-            <button id='{{ item.datapath }}' onClick='plot(this.id,"{{" [\\'sgdidv\\',\\'log\\']"|e}} ","dsf")'>Log(dIdV)</button>
+    
             <button id='{{ item.datapath }}' onClick='tovar(this.id)'>toVar ('file')</button>
             <br/>
-            <button id='{{ item.datapath }}' onClick='plot(this.id,"{{" [\\'deinterlace\\']"|e}} ","dsf")'>Deinterlace</button>
+            <button id='{{ item.datapath }}' onClick='refresh(this.id)'>Refresh</button>
+
+            <br/>
+            <button id='{{ item.datapath }}' onClick='plotwithStyle(this.id)' class='plotStyleSelect'>Plot with</button>
+            <form name='{{ item.datapath }}'>
+            <select name="selector">
+                <option value="{{"[\\'\\']"|e}}">normal</option>
+                <option value="{{"[\\'savgol\\',\\'log\\']"|e}}">savgol,log</option>
+                <option value="{{"[\\'sgdidv\\']"|e}}">sgdidv</option>
+                <option value="{{" [\\'sgdidv\\',\\'log\\']"|e}} ">sgdidv,log</option>
+                <option value="{{" [\\'mov_avg\\',\\'didv\\',\\'didv\\']"|e}} ">mov_avg,didv,abs</option>
+                <option value="{{" [\\'deinterlace\\']"|e}} ">deinterlace</option>
+                
+            </select>
+            
+            </form>            
             </div>
         </div>
     {% if loop.index % 3 == 0 %}
@@ -181,6 +194,8 @@ class tessierView(object):
     {% endif %}
     {% endfor %}    
     </div>
+    
+    
         <script type="text/Javascript">
             function handle_output(out){
                     
@@ -188,11 +203,26 @@ class tessierView(object):
             function pycommand(exec){
                 var kernel = IPython.notebook.kernel;
                 var callbacks = { 'iopub' : {'output' : handle_output}};
-                var msg_id = kernel.execute(exec, callbacks, {silent:false});            
+                var msg_id = kernel.execute(exec, callbacks, {silent:false});
             }
             function tovar(id) {
                 exec =' file \= \"' + id + '\"';
                 pycommand(exec);
+            }
+            function refresh(id) {
+                exec =' import tessierView as tv;  a=tv.tessierView();a.makethumbnail(\"' + id + '\",override=True)';
+                pycommand(exec);
+            }
+            function getStyle(id){
+                var x = document.querySelectorAll('form[name=\\"'+id+'\\"]')
+                form = x[0]; //should be only one form
+                selector = form.selector;
+                var style = selector.options[selector.selectedIndex].value;
+                return style
+            }
+            function plotwithStyle(id) {
+                var style = getStyle(id);
+                plot(id,style);
             }
             function plot(id,x,y){
                 dir = id.split('/');

@@ -236,7 +236,7 @@ def getnDimFromData(file,data):
 		return nDim
 	
 	
-def starplot(file,fig=None):
+def starplot(file,fig=None,style=None,n_index=None):
 	names,skiprows=parseheader(file)
 	dat = loadFile(file,names,skiprows)
 	# dat=dat.dropna(how='any') #not doing this somehow prevent a line drawn from the beginning to the end of the line?
@@ -247,10 +247,24 @@ def starplot(file,fig=None):
 		fig = plt.figure(fig.number)
 
 	#basically project the first and final dimension
+	cnt= 0
 	for i in range(0,len(dat.keys())-1):
+		n_subplots = len(dat.keys())+1
+		if n_index != None:
+				n_subplots = len(n_index)
+				print n_subplots
+				if i not in n_index:
+					continue
 		title = parseUnitAndNameFromColumnName(dat.keys()[i])
-		ax = plt.subplot(len(dat.keys())+1,1,i+1)
-		plt.plot(dat[dat.keys()[i]],(dat[dat.keys()[-1]]),label=title)
+		cnt=cnt+1
+		ax = plt.subplot(n_subplots,1,cnt)
+		
+		y= (dat[dat.keys()[-1]])
+		wrap = tstyle.getPopulatedWrap(style)
+		wrap['XX'] = y
+		tstyle.processStyle(style,wrap)
+		
+		plt.plot(dat[dat.keys()[i]],wrap['XX'],label=title)
 		plt.legend(loc=9, bbox_to_anchor=(-0.5, 0.7), ncol=3)
 	return fig
 	
@@ -574,7 +588,7 @@ class plot3DSlices:
 				style = list([style])
 
 			#autodeinterlace function
-			if y[yu-1]==y[yu]: style.append('deinterlace1')	
+# 			if y[yu-1]==y[yu]: style.append('deinterlace1')	
 			#autodidv function
 			if (max(y) == -1*min(y) and max(y) <= 150) : style.insert(0,'sgdidv')	
 
@@ -800,7 +814,7 @@ class plotR:
 
 			#sorting sorts negative to positive, so beware:
 			#sweep direction determines which part of array should be cut off
-			if not sweepdirection:
+			if sweepdirection:
 				z = z[-xu*yu:]
 				x = x[-xu*yu:]
 				y = y[-xu*yu:]
@@ -855,7 +869,7 @@ class plotR:
 # does not work properly due to not plotting both deinterlaced, gives problems with star measurements e.g. 
 
 			#autodidv function
-			if (max(y) == -1*min(y) and max(y) <= 150) : style.insert(0,'sgdidv')
+ 			if (max(y) == -1*min(y) and max(y) <= 150) : style.insert(0,'sgdidv')
 
 			measAxisDesignation = parseUnitAndNameFromColumnName(self.data.keys()[-1])
 			#wrap all needed arguments in a datastructure
