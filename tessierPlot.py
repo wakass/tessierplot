@@ -345,6 +345,9 @@ def loadFile(file,names=['L','B1','B2','vsd','zz'],skiprows=0):
 def loadCustomColormap(file='./cube1.txt'):
 	do = np.loadtxt(file)
 	ccmap = mpl.colors.LinearSegmentedColormap.from_list('name',do)
+	
+	ccmap.set_under(do[0])
+	ccmap.set_over(do[-1])
 	return ccmap
 
 import math
@@ -708,10 +711,12 @@ class plotR:
 		self.names = None
 		self.fig = None
 	
-		self.exportData =[]		
+		self.exportData =[]	
+		self.exportDataMeta = []	
 		self.file = file
 
 		self.data  = self.loadFile(file) 
+		self.name  = file
 		self.filterdata = None
 		
 		self.ndim = self.getnDimFromData()
@@ -730,9 +735,11 @@ class plotR:
 		coords = np.array([x['name'] for x in self.header if x['type']=='coordinate'])
 		
 		uniques_col_str = coords[filter]
-
+		print uniques_col_str
 		if len(coords[filter_neg]) > 1: 
+			
 			self.plot3d(uniques_col_str=uniques_col_str,**kwargs)
+			self.exportToMtx() #do this
 		else:
 			self.plot2d(**kwargs)		
 
@@ -745,6 +752,7 @@ class plotR:
 			cminlim , cmaxlim = np.min(data) , np.max(data)
 		return (cminlim,cmaxlim)
 
+		
 	def plot3d(self,fiddle=True,uniques_col_str=[],n_index=None,style='log',clim='auto',aspect='auto',interpolation='none',**kwargs): #previously plot3dslices
 		if not self.fig:
 			self.fig = plt.figure()
@@ -754,20 +762,19 @@ class plotR:
 			
 		cols = self.data.columns.tolist()
 		filterdata = self.sortdata()
-
+		print style
 		uniques_col = []
 		self.uniques_per_col=[]
-		
-		
-		sweepdirection = self.data[cols[-1]][0] > self.data[cols[-1]][1] #True is sweep neg to pos
-		
+		self.data = self.data.dropna(how='any')
+		sweepdirection = self.data[cols[-2]].iloc[0] > self.data[cols[-2]].iloc[1] #True is sweep neg to pos
+
 				
 
 		for i in uniques_col_str:
 			col = getattr(filterdata,i)
 			uniques_col.append(col)
 			self.uniques_per_col.append(list(col.unique()))
-
+		
 		self.ccmap = loadCustomColormap()
 
 
@@ -789,9 +796,16 @@ class plotR:
 			if n_index != None:
 				if j not in n_index:
 					continue
-
-			slicy = filterdata.loc[ind]
-			#get all the last columns, that we assume contains the to be plotted data
+			sluicy = filterdata.loc[ind]
+			slicy = sluicy
+			#magic follows:
+			#get the last columns, and exclude uniques_cols
+			us=uniques_col_str
+			if len(uniques_col_str) > 0:
+				b=[ slicy.columns!=u for u in us]
+				c = reduce(lambda x,y: numpy.logical_and(x,y), b)
+				slicy = slicy[slicy.columns[c]]
+					
 			x=slicy.iloc[:,-3]
 			y=slicy.iloc[:,-2]
 			z=slicy.iloc[:,-1]
@@ -850,9 +864,10 @@ class plotR:
 					'xname':cols[-3],
 					'yname':cols[-2],
 					'zname':'unused',
-					'datasetname':data.name}
+					'datasetname':self.name}
 				self.exportDataMeta = np.append(self.exportDataMeta,m)
-			except:
+			except Exception,e:
+				print e
 				pass
 
 			ax = plt.subplot(nplots, 1, cnt+1)
@@ -866,10 +881,9 @@ class plotR:
 
 # 			#autodeinterlace function
 # 			if y[yu-1]==y[yu]: style.append('deinterlace0')
-# does not work properly due to not plotting both deinterlaced, gives problems with star measurements e.g. 
 
 			#autodidv function
- 			if (max(y) == -1*min(y) and max(y) <= 150) : style.insert(0,'sgdidv')
+#  			if (max(y) == -1*min(y) and max(y) <= 150) : style.insert(0,'sgdidv')
 
 			measAxisDesignation = parseUnitAndNameFromColumnName(self.data.keys()[-1])
 			#wrap all needed arguments in a datastructure
@@ -916,16 +930,16 @@ class plotR:
 
 
 			if 'flipaxes' in style:
-				ax.set_xlabel(cols[-2])
-				ax.set_ylabel(cols[-3])
+				ax.set_xlabel(slicy.columns[-2])
+				ax.set_ylabel(slicy.columns[-3])
 			else:
-				ax.set_xlabel(cols[-3])
-				ax.set_ylabel(cols[-2])
+				ax.set_xlabel(slicy.columns[-3])
+				ax.set_ylabel(slicy.columns[-2])
 
 
 			title = ''
 			for i in uniques_col_str:
-				title = '\n'.join([title, '{:s}: {:g} (mV)'.format(i,getattr(slicy,i).iloc[0])])
+				title = '\n'.join([title, '{:s}: {:g} (mV)'.format(i,getattr(sluicy,i).iloc[0])])
 			print(title)
 			if 'notitle' not in style:
 				ax.set_title(title)
@@ -1038,9 +1052,9 @@ class plotR:
 	def loadFile(self,file):
 
 		self.header,self.skiprows = self.parseheader(file)
-		data = pd.read_csv(file, sep='\t', comment='#',skiprows=self.skiprows,names=[i['name'] for i in self.header])
-		data.name = file
-		return data
+		self.data = pd.read_csv(file, sep='\t', comment='#',skiprows=self.skiprows,names=[i['name'] for i in self.header])
+		self.data.name = file
+		return self.data
 	
 	def toggleFiddle(self):
 		from IPython.core import display
@@ -1132,7 +1146,7 @@ class plotR:
 			sz = np.shape(data)
 			#write
 			try:
-				fid = open('{:s}{:d}{:s}'.format(self.data.name, j, '.mtx'),'w+')
+				fid = open('{:s}{:d}{:s}'.format(self.name, j, '.mtx'),'w+')
 			except Exception as e:
 				print('Couldnt create file: {:s}'.format(str(e)))
 				return

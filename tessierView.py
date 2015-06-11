@@ -178,10 +178,12 @@ class tessierView(object):
             <form name='{{ item.datapath }}'>
             <select name="selector">
                 <option value="{{"[\\'\\']"|e}}">normal</option>
+                <option value="{{"[\\'log\\']"|e}}">log</option>
                 <option value="{{"[\\'savgol\\',\\'log\\']"|e}}">savgol,log</option>
                 <option value="{{"[\\'sgdidv\\']"|e}}">sgdidv</option>
                 <option value="{{" [\\'sgdidv\\',\\'log\\']"|e}} ">sgdidv,log</option>
-                <option value="{{" [\\'mov_avg\\',\\'didv\\',\\'didv\\']"|e}} ">mov_avg,didv,abs</option>
+                <option value="{{" [\\'mov_avg\\',\\'didv\\',\\'abs\\']"|e}} ">mov_avg,didv,abs</option>
+                <option value="{{" [\\'mov_avg\\',\\'didv\\',\\'abs\\',\\'log\\']"|e}} ">mov_avg,didv,abs,log</option>
                 <option value="{{" [\\'deinterlace\\']"|e}} ">deinterlace</option>
                 
             </select>
