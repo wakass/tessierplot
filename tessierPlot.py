@@ -762,7 +762,7 @@ class plotR:
 			
 		cols = self.data.columns.tolist()
 		filterdata = self.sortdata()
-		print style
+		
 		uniques_col = []
 		self.uniques_per_col=[]
 		self.data = self.data.dropna(how='any')
@@ -803,7 +803,7 @@ class plotR:
 			us=uniques_col_str
 			if len(uniques_col_str) > 0:
 				b=[ slicy.columns!=u for u in us]
-				c = reduce(lambda x,y: numpy.logical_and(x,y), b)
+				c = reduce(lambda x,y: np.logical_and(x,y), b)
 				slicy = slicy[slicy.columns[c]]
 					
 			x=slicy.iloc[:,-3]
