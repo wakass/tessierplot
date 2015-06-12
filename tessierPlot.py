@@ -803,7 +803,7 @@ class plotR:
 			us=uniques_col_str
 			if len(uniques_col_str) > 0:
 				b=[ slicy.columns!=u for u in us]
-				c = reduce(lambda x,y: numpy.logical_and(x,y), b)
+				c = reduce(lambda x,y: np.logical_and(x,y), b)
 				slicy = slicy[slicy.columns[c]]
 					
 			x=slicy.iloc[:,-3]
@@ -878,12 +878,6 @@ class plotR:
 			if type(style) != list:
 				style = list([style])
 
-
-# 			#autodeinterlace function
-# 			if y[yu-1]==y[yu]: style.append('deinterlace0')
-
-			#autodidv function
-#  			if (max(y) == -1*min(y) and max(y) <= 150) : style.insert(0,'sgdidv')
 
 			measAxisDesignation = parseUnitAndNameFromColumnName(self.data.keys()[-1])
 			#wrap all needed arguments in a datastructure
@@ -1024,7 +1018,18 @@ class plotR:
 		ax.set_xlabel(xaxislabel[0]+'(' + xaxislabel[1] +')')
 		ax.set_ylabel(yaxislabel[0]+'(' + yaxislabel[1] +')')
 		return self.fig
+	def guessStyle(self):
+		style=[]
+		#autodeinterlace function
+		#	if y[yu-1]==y[yu]: style.append('deinterlace0')
 
+		#autodidv function
+		y=self.filterdata.iloc[:,-2]
+ 		if (max(y) == -1*min(y) and max(y) <= 150):
+			style.insert(0,'sgdidv')
+ 			style.insert(1,'log')
+		return style
+		
 	def sortdata(self,refresh=False):
 		#some light caching
 		if ((self.filterdata) is None) or refresh:
