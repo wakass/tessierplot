@@ -99,7 +99,8 @@ class tessierView(object):
 
                 p = ts.plotR(file)
                 if len(p.data) > 20: ##just make sure really unfinished measurements are thrown out
-                    p.quickplot(style=style) 
+                    guessStyle = p.guessStyle()
+                    p.quickplot(style=guessStyle + style)
                     p.fig.savefig(thumbfile,bbox_inches='tight' )
                     p.fig.savefig(thumbfile_datadir,bbox_inches='tight' )
                     plt.close(p.fig)
@@ -126,6 +127,7 @@ class tessierView(object):
         for dirname,dirnames,filenames in chain.from_iterable(os.walk(path) for path in paths):
             for filename in filenames:
                 fullpath = os.path.join(dirname,filename)
+                #print fullpath
                 res = reg.findall(filename)
                 
                 if res: #found a file that matches the filemask
@@ -148,7 +150,7 @@ class tessierView(object):
         #unobfuscate the file relative to the working directory
         #since files are served from ipyhton notebook from ./files/
         all_relative = [{ 'thumbpath':'./files/'+os.path.relpath(k['thumbpath'],start=os.getcwd()),'datapath':k['datapath'] } for k in self._allthumbs]
-    
+        #print all_relative
         # print all_relative
         out=u"""
 
@@ -203,6 +205,8 @@ class tessierView(object):
                     
             }
             function pycommand(exec){
+                exec = exec.replace(/\\\\/g,"\\\\\\\\");
+
                 var kernel = IPython.notebook.kernel;
                 var callbacks = { 'iopub' : {'output' : handle_output}};
                 var msg_id = kernel.execute(exec, callbacks, {silent:false});
@@ -215,7 +219,8 @@ class tessierView(object):
                 exec =' import tessierView as tv;  a=tv.tessierView();a.makethumbnail(\"' + id + '\",override=True)';
                 pycommand(exec);
             }
-            function getStyle(id){
+            function getStyle(id) {
+                id = id.replace(/\\\\/g,"\\\\\\\\");
                 var x = document.querySelectorAll('form[name=\\"'+id+'\\"]')
                 form = x[0]; //should be only one form
                 selector = form.selector;
@@ -272,6 +277,10 @@ class tessierView(object):
             .row { width: auto; display: table; table-layout: fixed; }
             .col { display: table-cell;  width: auto;  }
         }
+        img{
+            width:100%;
+            height:auto;
+            }
         </style>
         """
         temp = jj.Template(out)
