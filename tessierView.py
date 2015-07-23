@@ -166,9 +166,22 @@ class tessierView(object):
     {% endif %}
 
         <div class='col'>
-            <div class='thumb'>
-            <img src="{{ item.thumbpath }}"/> 
-            </div>
+<!-- 
+        <div class="output_area">
+            <div class="output_subarea output_png output_result">
+ -->
+     <div class='thumb'>
+                <img  class="ui-resizable" src="{{ item.thumbpath }}"/> 
+
+
+                <div class="ui-resizable-handle ui-resizable-e" style="z-index: 90; display: none;"></div>
+                <div class="ui-resizable-handle ui-resizable-s" style="z-index: 90; display: none;"></div>  
+                <div class="ui-resizable-handle ui-resizable-se ui-icon ui-icon-gripsmall-diagonal-se" style="z-index: 90; display: none;"></div>
+     </div>
+<!-- 
+</div>
+</div>
+ -->
             <div class='controls'>
     
             <button id='{{ item.datapath }}' onClick='tovar(this.id)'>toVar ('file')</button>
@@ -187,7 +200,7 @@ class tessierView(object):
                 <option value="{{" [\\'mov_avg\\',\\'didv\\',\\'abs\\']"|e}} ">mov_avg,didv,abs</option>
                 <option value="{{" [\\'mov_avg\\',\\'didv\\',\\'abs\\',\\'log\\']"|e}} ">mov_avg,didv,abs,log</option>
                 <option value="{{" [\\'deinterlace\\']"|e}} ">deinterlace</option>
-                
+                <option value="{{" [\\'crosscorr\\']"|e}} ">Crosscorr</option>
             </select>
             
             </form>            
@@ -206,7 +219,6 @@ class tessierView(object):
             }
             function pycommand(exec){
                 exec = exec.replace(/\\\\/g,"\\\\\\\\");
-
                 var kernel = IPython.notebook.kernel;
                 var callbacks = { 'iopub' : {'output' : handle_output}};
                 var msg_id = kernel.execute(exec, callbacks, {silent:false});

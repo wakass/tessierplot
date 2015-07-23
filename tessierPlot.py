@@ -850,7 +850,7 @@ class plotR:
 			xstep = (xlims[0] - xlims[1])/xu
 			ystep = (ylims[0] - ylims[1])/yu
 			ext = xlims+ylims
-			
+			self.extent = ext
 			self.XX = XX
 			
 			self.exportData.append(XX)
@@ -904,23 +904,26 @@ class plotR:
 
 			#postrotate np.rot90
 			XX = np.rot90(XX)
-
+			self.XX = XX
 			if 'deinterlace' in style:
 				self.fig = plt.figure()
 				ax_deinter_odd  = plt.subplot(2, 1, 1)
 				w['deinterXXodd'] = np.rot90(w['deinterXXodd'])
 				ax_deinter_odd.imshow(w['deinterXXodd'],extent=ext, cmap=plt.get_cmap(self.ccmap),aspect=aspect,interpolation=interpolation)
-
+				self.deinterXXodd_data = w['deinterXXodd']
+				
 				ax_deinter_even = plt.subplot(2, 1, 2)
 				w['deinterXXeven'] = np.rot90(w['deinterXXeven'])
 				ax_deinter_even.imshow(w['deinterXXeven'],extent=ext, cmap=plt.get_cmap(self.ccmap),aspect=aspect,interpolation=interpolation)
+				self.deinterXXeven_data = w['deinterXXeven']
 
-			self.im = ax.imshow(XX,extent=ext, cmap=plt.get_cmap(self.ccmap),aspect=aspect,interpolation=interpolation, norm=w['imshow_norm'])
+			else:
+				self.im = ax.imshow(XX,extent=ext, cmap=plt.get_cmap(self.ccmap),aspect=aspect,interpolation=interpolation, norm=w['imshow_norm'])
 
-			if  str(clim).lower() == 'auto': ## really not a good way i suppose, clim should be a tuple
-				self.im.set_clim(self.autoColorScale(XX.flatten()))
-			elif clim != (0,0):
-			   	self.im.set_clim(clim)
+				if  str(clim).lower() == 'auto': ## really not a good way i suppose, clim should be a tuple
+					self.im.set_clim(self.autoColorScale(XX.flatten()))
+				elif clim != (0,0):
+					self.im.set_clim(clim)
 
 
 			if 'flipaxes' in style:
@@ -943,12 +946,11 @@ class plotR:
 			cax = divider.append_axes("right", size="5%", pad=0.05)
 
 			pos = list(ax.get_position().bounds)
-
-			self.cbar = plt.colorbar(self.im, cax=cax)
-			cbar = self.cbar
-
-			cbar.set_label(cbar_title)
-# 			plt.tight_layout()
+			if hasattr(self, 'im'):
+				self.cbar = plt.colorbar(self.im, cax=cax)
+				cbar = self.cbar
+	
+				cbar.set_label(cbar_title)
 
 			cnt+=1 #counter for subplots
 

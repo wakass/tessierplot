@@ -76,6 +76,7 @@ def helper_sgdidv(w):
 	w['cbar_unit'] = '$\mu$Siemens'
 	w['cbar_unit'] = r'$\mathrm{e}^2/\mathrm{h}$'
 
+
 def helper_log(w):
 	w['XX'] = np.log10(np.abs(w['XX']))
 	w['cbar_trans'] = ['log$_{10}$','abs'] + w['cbar_trans']
@@ -124,6 +125,26 @@ def helper_flipaxes(w):
 	w['XX'] = np.transpose( w['XX'])
 	w['ext'] = (w['ext'][2],w['ext'][3],w['ext'][0],w['ext'][1])
 
+def helper_crosscorr(w):
+	A = w['XX']
+	(first) = (bool(w['toFirstColumn'])) #do all crosscorrelations on the first column
+	for i in range(A.shape[1]-1):
+		if first:
+			column = A[:,1]
+		else:
+			column = A[:,i]
+		
+		next_column = A[:,i+1]
+
+		#make up an x for now
+		x = np.linspace(0,4,A.shape[0])
+		offset = get_offset(x,column,next_column)
+		A[:,i+1] = np.interp(x+offset,x,next_column)
+
+	w['XX'] = A
+
+
+
 STYLE_FUNCS = {
 	'deinterlace': helper_deinterlace,
 	'deinterlace0': helper_deinterlace0,
@@ -137,7 +158,8 @@ STYLE_FUNCS = {
 	'savgol': helper_savgol,
 	'sgdidv': helper_sgdidv,
 	'fancylog': helper_fancylog,
-	'minsubtract': helper_minsubtract
+	'minsubtract': helper_minsubtract,
+	'crosscorr':helper_crosscorr
 }
 
 '''
@@ -161,7 +183,8 @@ STYLE_SPECS = {
 	'savgol': {'samples': 11, 'order': 3, 'param_order': ['samples', 'order']},
 	'sgdidv': {'samples': 11, 'order': 3, 'param_order': ['samples', 'order']},
 	'fancylog': {'cmin': None, 'cmax': None, 'param_order': ['cmin', 'cmax']},
-	'minsubtract': {'param_order': []}
+	'minsubtract': {'param_order': []},
+	'crosscorr': {'toFirstColumn':True,'param_order': ['toFirstColumn']}
 }
 
 #Backward compatibility
@@ -243,3 +266,49 @@ def moving_average_2d(data, window):
     # (mode='same') and symmetrical boundary conditions are assumed
     # (boundary='symm').
     return signal.convolve2d(data, window, mode='same', boundary='symm')
+
+def get_offset(x,y1,y2):
+#     plt.figure(43)
+#     plt.plot(x,y1,x,y2)
+    corr = np.correlate(y1,y2,mode='same')
+
+    #do a fit with a standard parabola for subpixel accuracy
+    import lmfit
+    from lmfit.models import ParabolicModel
+    mod = ParabolicModel()
+
+    def parabola(x,x0,a,b,c):
+        return a*np.power((x-x0),2)+b*(x-x0)+c
+    mod = lmfit.Model(parabola)
+
+    _threshold = 0.7*max(corr)
+    xcorr=(np.linspace(0,len(corr),len(corr)))
+    xcorrfit=xcorr[corr >= _threshold]
+    ycorrfit=corr[corr >= _threshold]
+
+    
+    p=lmfit.Parameters()
+            #           (Name,  Value,  Vary,   Min,  Max,  Expr)
+
+    p.add_many(        ('x0',      xcorrfit[0],True,None,None,None),
+                        ('a',      -1,True,None,1,None),
+                       ('c',    1.,  True, None,None ,  None),
+                        ('b',0, False,  None,None,None)
+               )
+    result = mod.fit(ycorrfit,params=p,x=xcorrfit)
+    # print result.fit_report()
+    # if result poorly conditioned throw it out and make offset 0
+    
+    
+#     plt.figure(44)
+#     plt.plot(corr,'o')
+#     plt.plot(xcorrfit,result.best_fit,'-')
+    
+    x0=result.best_values['x0']
+    span = np.abs(min(x)+max(x))
+
+    #map back to real x values
+    xmap= np.linspace(span/2,-span/2,len(xcorr)) 
+
+    offset_intp = np.interp(x0,xcorr,xmap)
+    return offset_intp
