@@ -5,7 +5,7 @@ import collections
 import matplotlib.colors as mplc
 
 REGEX_STYLE_WITH_PARAMS = re.compile('(.+)\((.+)\)')
-REGEX_VARVALPAIR = re.compile('(\w+)=(\w+)')
+REGEX_VARVALPAIR = re.compile('(\w+)=([\w]*?\.+?[\w]*)')
 
 def nonzeromin(x):
 	'''
@@ -127,19 +127,36 @@ def helper_flipaxes(w):
 
 def helper_crosscorr(w):
 	A = w['XX']
-	(first) = (bool(w['toFirstColumn'])) #do all crosscorrelations on the first column
-	for i in range(A.shape[1]-1):
-		if first:
-			column = A[:,1]
+	(first) = (bool(w['crosscorr_toFirstColumn'])) #do all crosscorrelations on the first column
+	
+	B = A.copy() 
+	
+	x = np.linspace(w['ext'][2],w['ext'][3],A.shape[1])
+	x_org = x.copy()
+	if w['crosscorr_peakmin'] is not None:
+		import matplotlib.pyplot as plt
+		if w['crosscorr_peakmin'] > w['crosscorr_peakmax']:
+			peak = (x <= w['crosscorr_peakmin']) & (x >= w['crosscorr_peakmax'])
 		else:
-			column = A[:,i]
-		
-		next_column = A[:,i+1]
+			peak = (x >= w['crosscorr_peakmin']) & (x <= w['crosscorr_peakmax'])
 
-		#make up an x for now
-		x = np.linspace(0,4,A.shape[0])
+		B = B[:,peak]
+		x = x[peak]
+
+	for i in range(B.shape[0]-1):
+		#fit all peaks on B and calculate offset
+		if first:
+			column = B[0,:]
+		else:
+			column = B[i,:]
+		
+		next_column = B[i+1,:]
+		
 		offset = get_offset(x,column,next_column)
-		A[:,i+1] = np.interp(x+offset,x,next_column)
+# 		print offset	
+		#modify A (and B for fun?S::S)
+		A[i+1,:] = np.interp(x_org+offset,x_org,A[i+1,:])
+		B[i+1,:] = np.interp(x+offset,x,B[i+1,:])
 
 	w['XX'] = A
 
@@ -184,7 +201,7 @@ STYLE_SPECS = {
 	'sgdidv': {'samples': 11, 'order': 3, 'param_order': ['samples', 'order']},
 	'fancylog': {'cmin': None, 'cmax': None, 'param_order': ['cmin', 'cmax']},
 	'minsubtract': {'param_order': []},
-	'crosscorr': {'toFirstColumn':True,'param_order': ['toFirstColumn']}
+	'crosscorr': {'peakmin':None,'peakmax':None,'toFirstColumn':True,'param_order': ['peakmin','peakmax','toFirstColumn']}
 }
 
 #Backward compatibility
@@ -224,7 +241,11 @@ def getPopulatedWrap(style=[]):
 					if spregex is None:
 						spar.append(sparam)
 					else:
-						w['{:s}_{:s}'.format(s, spregex.group(1))] = spregex.group(2)
+						if spregex.group(2).split('.'):		
+							w['{:s}_{:s}'.format(s, spregex.group(1))] = float(spregex.group(2))
+						else:
+							w['{:s}_{:s}'.format(s, spregex.group(1))] = spregex.group(2)
+						
 			# Process non-keyword arguments and default values
 			(i, j) = (0, 0)
 			pnames = STYLE_SPECS[s]['param_order']
@@ -239,6 +260,8 @@ def getPopulatedWrap(style=[]):
 				i += 1
 		except Exception as e:
 			print('getPolulatedWrap(): Style {:s} does not exist ({:s})'.format(s, str(e)))
+			print e.__doc__
+			print e.args
 			pass
 	return w
 
@@ -250,6 +273,8 @@ def processStyle(style, wrap):
 			func(wrap)
 		except Exception as e:
 			print('processStyle(): Style {:s} does not exist ({:s})'.format(s, str(e)))
+			print e.__doc__
+			print e.args
 			pass
 
 
@@ -268,6 +293,7 @@ def moving_average_2d(data, window):
     return signal.convolve2d(data, window, mode='same', boundary='symm')
 
 def get_offset(x,y1,y2):
+#     import matplotlib.pyplot as plt
 #     plt.figure(43)
 #     plt.plot(x,y1,x,y2)
     corr = np.correlate(y1,y2,mode='same')
@@ -290,25 +316,26 @@ def get_offset(x,y1,y2):
     p=lmfit.Parameters()
             #           (Name,  Value,  Vary,   Min,  Max,  Expr)
 
-    p.add_many(        ('x0',      xcorrfit[0],True,None,None,None),
+    p.add_many(        ('x0',      xcorrfit[ycorrfit==np.max(ycorrfit)][0],True,None,None,None),
                         ('a',      -1,True,None,1,None),
                        ('c',    1.,  True, None,None ,  None),
                         ('b',0, False,  None,None,None)
                )
     result = mod.fit(ycorrfit,params=p,x=xcorrfit)
-    # print result.fit_report()
-    # if result poorly conditioned throw it out and make offset 0
+#     print result.fit_report()
+    # todo:if result poorly conditioned throw it out and make offset 0
     
     
 #     plt.figure(44)
 #     plt.plot(corr,'o')
 #     plt.plot(xcorrfit,result.best_fit,'-')
-    
+#     plt.plot(xcorrfit,result.init_fit,'-')
+
     x0=result.best_values['x0']
     span = np.abs(min(x)+max(x))
 
     #map back to real x values
-    xmap= np.linspace(span/2,-span/2,len(xcorr)) 
+    xmap= np.linspace(span/2-min(x),-span/2+min(x),len(xcorr)) 
 
     offset_intp = np.interp(x0,xcorr,xmap)
     return offset_intp
