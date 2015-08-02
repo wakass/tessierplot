@@ -6,7 +6,7 @@ import matplotlib.colors as mplc
 import matplotlib.pyplot as plt
 
 REGEX_STYLE_WITH_PARAMS = re.compile('(.+)\((.+)\)')
-REGEX_VARVALPAIR = re.compile('(\w+)=([-]?[\w]*?\.+?[\w]*)')
+REGEX_VARVALPAIR = re.compile('(\w+)=(.*)')
 
 def nonzeromin(x):
 	'''
@@ -128,7 +128,7 @@ def helper_flipaxes(w):
 
 def helper_crosscorr(w):
 	A = w['XX']
-	(first) = ((w['crosscorr_toFirstColumn']) == 'True') #do all crosscorrelations on the first column
+	first = (w['crosscorr_toFirstColumn'])
 
 	B = A.copy() 
 	#x in terms of linetrace, (y in terms of 3d plot)
@@ -274,10 +274,18 @@ def getPopulatedWrap(style=[]):
 					if spregex is None:
 						spar.append(sparam)
 					else:
-						if len(spregex.group(2).split('.')) > 1:		
-							w['{:s}_{:s}'.format(s, spregex.group(1))] = float(spregex.group(2))
-						else:
-							w['{:s}_{:s}'.format(s, spregex.group(1))] = spregex.group(2)
+						val = spregex.group(2)
+						#bool posing as string?
+						if val.lower() == 'true':
+							val = True
+						elif val.lower() == 'false':
+							val = False
+						if type(val) is not bool:
+							try:
+								val = float(val)
+							except ValueError:
+								pass						
+						w['{:s}_{:s}'.format(s, spregex.group(1))] = val
 						
 			# Process non-keyword arguments and default values
 			(i, j) = (0, 0)
