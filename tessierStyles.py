@@ -166,7 +166,6 @@ def helper_deint_cross(w):
 
 	B = A.copy() 
 	x = np.linspace(w['ext'][2],w['ext'][3],A.shape[1])
-	x_org = x.copy()
 	
 	#start at second column
 	for i in (np.arange(B.shape[0]-1))[1::2]:
@@ -179,7 +178,7 @@ def helper_deint_cross(w):
 		#average the offsets left and right
 		offset = (get_offset(x,column,next_column)+get_offset(x,column,previous_column))/2.
 		#modify A
-		A[i,:] = np.interp(x_org+offset,x_org,A[i,:])
+		A[i,:] = np.interp(x-offset,x,A[i,:])
 
 	
 	w['XX'] = A

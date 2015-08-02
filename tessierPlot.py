@@ -336,7 +336,7 @@ class plotR:
 
 			#postrotate np.rot90
 			XX = np.rot90(XX)
-			self.XX = XX
+# 			self.XX = XX
 			if 'deinterlace' in style:
 				self.fig = plt.figure()
 				ax_deinter_odd  = plt.subplot(2, 1, 1)
