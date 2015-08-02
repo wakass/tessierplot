@@ -3,9 +3,10 @@ from scipy import signal
 import re
 import collections
 import matplotlib.colors as mplc
+import matplotlib.pyplot as plt
 
 REGEX_STYLE_WITH_PARAMS = re.compile('(.+)\((.+)\)')
-REGEX_VARVALPAIR = re.compile('(\w+)=([\w]*?\.+?[\w]*)')
+REGEX_VARVALPAIR = re.compile('(\w+)=([-]?[\w]*?\.+?[\w]*)')
 
 def nonzeromin(x):
 	'''
@@ -127,14 +128,13 @@ def helper_flipaxes(w):
 
 def helper_crosscorr(w):
 	A = w['XX']
-	(first) = (bool(w['crosscorr_toFirstColumn'])) #do all crosscorrelations on the first column
-	
+	(first) = ((w['crosscorr_toFirstColumn']) == 'True') #do all crosscorrelations on the first column
+
 	B = A.copy() 
-	
+	#x in terms of linetrace, (y in terms of 3d plot)
 	x = np.linspace(w['ext'][2],w['ext'][3],A.shape[1])
 	x_org = x.copy()
 	if w['crosscorr_peakmin'] is not None:
-		import matplotlib.pyplot as plt
 		if w['crosscorr_peakmin'] > w['crosscorr_peakmax']:
 			peak = (x <= w['crosscorr_peakmin']) & (x >= w['crosscorr_peakmax'])
 		else:
@@ -157,9 +157,38 @@ def helper_crosscorr(w):
 		#modify A (and B for fun?S::S)
 		A[i+1,:] = np.interp(x_org+offset,x_org,A[i+1,:])
 		B[i+1,:] = np.interp(x+offset,x,B[i+1,:])
-
+	
 	w['XX'] = A
 
+
+def helper_deint_cross(w):
+	A = w['XX']
+
+	B = A.copy() 
+	x = np.linspace(w['ext'][2],w['ext'][3],A.shape[1])
+	x_org = x.copy()
+	
+	#start at second column
+	for i in (np.arange(B.shape[0]-1))[1::2]:
+		#find offset of column to left and right
+		column = B[i,:]
+		
+		previous_column = B[i-1,:]
+		next_column = B[i+1,:]
+		
+		#average the offsets left and right
+		offset = (get_offset(x,column,next_column)+get_offset(x,column,previous_column))/2.
+		#modify A
+		A[i,:] = np.interp(x_org+offset,x_org,A[i,:])
+
+	
+	w['XX'] = A
+
+
+
+def helper_massage(w):
+	func = w['massage_func']
+	w['XX'] = func(w['XX'])
 
 
 STYLE_FUNCS = {
@@ -176,7 +205,9 @@ STYLE_FUNCS = {
 	'sgdidv': helper_sgdidv,
 	'fancylog': helper_fancylog,
 	'minsubtract': helper_minsubtract,
-	'crosscorr':helper_crosscorr
+	'crosscorr':helper_crosscorr,
+	'massage': helper_massage,
+	'deint_cross': helper_deint_cross
 }
 
 '''
@@ -201,7 +232,9 @@ STYLE_SPECS = {
 	'sgdidv': {'samples': 11, 'order': 3, 'param_order': ['samples', 'order']},
 	'fancylog': {'cmin': None, 'cmax': None, 'param_order': ['cmin', 'cmax']},
 	'minsubtract': {'param_order': []},
-	'crosscorr': {'peakmin':None,'peakmax':None,'toFirstColumn':True,'param_order': ['peakmin','peakmax','toFirstColumn']}
+	'crosscorr': {'peakmin':None,'peakmax':None,'toFirstColumn':True,'param_order': ['peakmin','peakmax','toFirstColumn']},
+	'massage': {'param_order': []},
+	'deint_cross': {'param_order': []}
 }
 
 #Backward compatibility
@@ -241,7 +274,7 @@ def getPopulatedWrap(style=[]):
 					if spregex is None:
 						spar.append(sparam)
 					else:
-						if spregex.group(2).split('.'):		
+						if len(spregex.group(2).split('.')) > 1:		
 							w['{:s}_{:s}'.format(s, spregex.group(1))] = float(spregex.group(2))
 						else:
 							w['{:s}_{:s}'.format(s, spregex.group(1))] = spregex.group(2)
@@ -293,7 +326,6 @@ def moving_average_2d(data, window):
     return signal.convolve2d(data, window, mode='same', boundary='symm')
 
 def get_offset(x,y1,y2):
-#     import matplotlib.pyplot as plt
 #     plt.figure(43)
 #     plt.plot(x,y1,x,y2)
     corr = np.correlate(y1,y2,mode='same')
@@ -332,10 +364,10 @@ def get_offset(x,y1,y2):
 #     plt.plot(xcorrfit,result.init_fit,'-')
 
     x0=result.best_values['x0']
-    span = np.abs(min(x)+max(x))
-
+    span = max(x)-min(x)
     #map back to real x values
-    xmap= np.linspace(span/2-min(x),-span/2+min(x),len(xcorr)) 
-
+    xmap= np.linspace(
+				span/2, -span/2
+				,len(xcorr)) 
     offset_intp = np.interp(x0,xcorr,xmap)
     return offset_intp
