@@ -125,6 +125,17 @@ def helper_abs(w):
 def helper_flipaxes(w):
 	w['XX'] = np.transpose( w['XX'])
 	w['ext'] = (w['ext'][2],w['ext'][3],w['ext'][0],w['ext'][1])
+	
+def helper_flipyaxis(w):
+	#remember, this is before the final rot90
+	#therefore lr, instead of ud
+	w['XX'] = np.fliplr( w['XX'])
+	w['ext'] = (w['ext'][0],w['ext'][1],w['ext'][3],w['ext'][2])
+
+def helper_flipxaxis(w):
+	w['XX'] = np.flipud( w['XX'])
+	w['ext'] = (w['ext'][1],w['ext'][0],w['ext'][2],w['ext'][3])
+
 
 def helper_crosscorr(w):
 	A = w['XX']
@@ -198,6 +209,8 @@ STYLE_FUNCS = {
 	'log': helper_log,
 	'normal': helper_normal,
 	'flipaxes': helper_flipaxes,
+	'flipxaxis': helper_flipxaxis,
+	'flipyaxis': helper_flipyaxis,
 	'mov_avg': helper_mov_avg,
 	'abs': helper_abs,
 	'savgol': helper_savgol,
@@ -225,6 +238,8 @@ STYLE_SPECS = {
 	'log': {'param_order': []},
 	'normal': {'param_order': []},
 	'flipaxes': {'param_order': []},
+	'flipyaxis': {'param_order': []},
+	'flipxaxis': {'param_order': []},
 	'mov_avg': {'m': 1, 'n': 5, 'win': None, 'param_order': ['m', 'n', 'win']},
 	'abs': {'param_order': []},
 	'savgol': {'samples': 11, 'order': 3, 'param_order': ['samples', 'order']},

@@ -68,9 +68,9 @@ def getnDimFromData(file,data):
 		return nDim
 	
 	
-def starplot(file,fig=None,style=None,n_index=None):
+def starplot(file,fig=None,style=[],n_index=None):
 	names,skiprows=parseheader(file)
-	dat = loadFile(file,names,skiprows)
+	dat = loadFile(file)
 	# dat=dat.dropna(how='any') #not doing this somehow prevent a line drawn from the beginning to the end of the line?
 
 	if fig == None:
@@ -172,10 +172,12 @@ class plotR:
 		print uniques_col_str
 		if len(coords[filter_neg]) > 1: 
 			
-			self.plot3d(uniques_col_str=uniques_col_str,**kwargs)
+			fig = self.plot3d(uniques_col_str=uniques_col_str,**kwargs)
 			self.exportToMtx() #do this
+			return fig 
 		else:
-			self.plot2d(**kwargs)		
+			fig = self.plot2d(**kwargs)		
+			return fig
 
 	def autoColorScale(self,data):
 		values, edges = np.histogram(data, 256)
@@ -187,7 +189,21 @@ class plotR:
 		return (cminlim,cmaxlim)
 
 		
-	def plot3d(self,fiddle=True,massage_func=None,uniques_col_str=[],n_index=None,style='log',clim='auto',aspect='auto',interpolation='none',**kwargs): #previously plot3dslices
+	def plot3d(self,fiddle=True,
+						massage_func=None,
+						uniques_col_str=[],
+						drawCbar=True,
+						subplots_args={'top':0.96, 'bottom':0.17, 'left':0.14, 'right':0.85,'hspace':0.0},
+						ax_destination=None,
+						n_index=None,
+						style='log',
+						clim='auto',
+						aspect='auto',
+						interpolation='none',
+						sweepoverride=False,
+						cbar_orientation='vertical',
+						cbar_location ='normal',
+						**kwargs): #previously plot3dslices
 		if not self.fig:
 			self.fig = plt.figure()
 		
@@ -212,7 +228,7 @@ class plotR:
 		self.ccmap = loadCustomColormap()
 
 
-		self.fig.subplots_adjust(top=0.96, bottom=0.07, left=0.07, right=0.9,hspace=0.0)
+		self.fig.subplots_adjust(**subplots_args)
 
 
 		nplots = 1
@@ -262,7 +278,7 @@ class plotR:
 
 			#sorting sorts negative to positive, so beware:
 			#sweep direction determines which part of array should be cut off
-			if sweepdirection:
+			if sweepdirection != sweepoverride: ##if sweep True, override the detect value
 				z = z[-xu*yu:]
 				x = x[-xu*yu:]
 				y = y[-xu*yu:]
@@ -303,8 +319,10 @@ class plotR:
 			except Exception,e:
 				print e
 				pass
-
-			ax = plt.subplot(nplots, 1, cnt+1)
+			if ax_destination is None:
+				ax = plt.subplot(nplots, 1, cnt+1)
+			else:
+				ax = ax_destination
 			cbar_title = ''
 			
 
@@ -366,7 +384,7 @@ class plotR:
 			else:
 				ax.set_xlabel(slicy.columns[-3])
 				ax.set_ylabel(slicy.columns[-2])
-
+							
 
 			title = ''
 			for i in uniques_col_str:
@@ -376,16 +394,30 @@ class plotR:
 				ax.set_title(title)
 			# create an axes on the right side of ax. The width of cax will be 5%
 			# of ax and the padding between cax and ax will be fixed at 0.05 inch.
-			divider = make_axes_locatable(ax)
-			cax = divider.append_axes("right", size="5%", pad=0.05)
-
-			pos = list(ax.get_position().bounds)
-			if hasattr(self, 'im'):
-				self.cbar = plt.colorbar(self.im, cax=cax)
-				cbar = self.cbar
-	
-				cbar.set_label(cbar_title)
-
+			if drawCbar:
+				from mpl_toolkits.axes_grid.inset_locator import inset_axes
+				if cbar_location == 'inset':
+					if cbar_orientation == 'horizontal':
+						cax = inset_axes(ax,width='30%',height='10%',loc=2,borderpad=1)
+					else: 
+						cax = inset_axes(ax,width='30%',height='10%',loc=1)						
+				else:
+					divider = make_axes_locatable(ax)
+					if cbar_orientation == 'horizontal':
+						cax = divider.append_axes("top", size="10%", pad=0.05)
+					else:
+						cax = divider.append_axes("right", size="5%", pad=0.05)
+					pos = list(ax.get_position().bounds)
+				if hasattr(self, 'im'):
+					self.cbar = plt.colorbar(self.im, cax=cax,orientation=cbar_orientation)
+					cbar = self.cbar
+					
+					if cbar_orientation == 'horizontal':
+						cbar.set_label(cbar_title,labelpad=-20, x=1.35)
+# 						cbar.ax.xaxis.set_label_position('top')
+# 						cbar.ax.yaxis.set_label_position('left')
+					else:
+						cbar.set_label(cbar_title)#,labelpad=-19, x=1.32)
 			cnt+=1 #counter for subplots
 
 		if fiddle: self.toggleFiddle()
@@ -444,7 +476,7 @@ class plotR:
 			wrap['XX'] = y
 			tstyle.processStyle(style,wrap)
 			ax = plt.plot(x,wrap['XX'],label=title,**kwargs)
-				
+			self.XX = wrap['XX']	
 		
 		plt.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3,
 			   ncol=2, mode="expand", borderaxespad=0.)
@@ -624,3 +656,64 @@ class plotR:
 			data.tofile(fid)
 			fid.close()
 
+def parseheader(file):
+		skipindex = 0
+		with open(file) as f:	
+			for i, line in enumerate(f):
+				if i < 3:
+					continue
+				if i > 5:
+					if line[0] != '#': #find the skiprows accounting for the first linebreak in the header
+						skipindex = i
+						break
+				if i > 300:
+					break
+		#nog een keer dunnetjes overdoen met read()
+		f = open(file)
+		alltext= f.read(skipindex)		
+		with open(file) as myfile:
+			alltext = [next(myfile) for x in xrange(skipindex)]
+		alltext= ''.join(alltext)
+	
+		#doregex
+		coord_expression = re.compile(r"""
+									^\#\s*Column\s(.*?)\:
+									[\r\n]{0,2}
+									\#\s*end\:\s(.*?)
+									[\r\n]{0,2}
+									\#\s*name\:\s(.*?)
+									[\r\n]{0,2}
+									\#\s*size\:\s(.*?)
+									[\r\n]{0,2}
+									\#\s*start\:\s(.*?)
+									[\r\n]{0,2}
+									\#\s*type\:\s(.*?)[\r\n]{0,2}$ 
+									
+									"""#annoying \r's...
+									,re.VERBOSE |re.MULTILINE)
+		
+		val_expression = re.compile(r"""
+									^\#\s*Column\s(.*?)\:
+									[\r\n]{0,2}
+									\#\s*name\:\s(.*?)
+									[\r\n]{0,2}
+									\#\s*type\:\s(.*?)[\r\n]{0,2}$
+									"""
+									,re.VERBOSE |re.MULTILINE)
+		coord=  coord_expression.findall(alltext) 
+		val  = val_expression.findall(alltext)
+		coord = [ zip(('column','end','name','size','start','type'),x) for x in coord]
+		coord = [dict(x) for x in coord]
+		val = [ zip(('column','name','type'),x) for x in val]
+		val = [dict(x) for x in val]
+		
+		header=coord+val
+
+		
+		return np.array(header),skipindex
+def loadFile(file):
+
+	header,skiprows = parseheader(file)
+	data = pd.read_csv(file, sep='\t', comment='#',skiprows=skiprows,names=[i['name'] for i in header])
+	data.name = file
+	return data

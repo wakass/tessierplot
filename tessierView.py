@@ -184,7 +184,7 @@ class tessierView(object):
  -->
             <div class='controls'>
     
-            <button id='{{ item.datapath }}' onClick='tovar(this.id)'>toVar ('file')</button>
+            <button id='{{ item.datapath }}' onClick='toclipboard(this.id)'>Filename to clipboard</button>
             <br/>
             <button id='{{ item.datapath }}' onClick='refresh(this.id)'>Refresh</button>
 
@@ -227,6 +227,10 @@ class tessierView(object):
                 exec =' file \= \"' + id + '\"';
                 pycommand(exec);
             }
+            function toclipboard(id) {
+                exec ='import pyperclip; pyperclip.copy(\"' + id + '\");pyperclip.paste()';
+                pycommand(exec);
+            }
             function refresh(id) {
                 exec =' import tessierView as tv;  a=tv.tessierView();a.makethumbnail(\"' + id + '\",override=True)';
                 pycommand(exec);
@@ -243,6 +247,7 @@ class tessierView(object):
                 var style = getStyle(id);
                 plot(id,style);
             }
+            
             function plot(id,x,y){
                 dir = id.split('/');
                 
