@@ -73,7 +73,7 @@ def overridethumbnail(file, fig):
 
 
 class tessierView(object):
-    def __init__(self, rootdir='./', filemask='.*\.dat$',filterstring=''):
+    def __init__(self, rootdir='./', filemask='.*\.dat(?:\.gz)?$',filterstring=''):
         self._root = rootdir
         self._filemask = filemask
         self._filterstring = filterstring
@@ -82,8 +82,16 @@ class tessierView(object):
         print 'You are now watching through the glasses of ideology'
         display(VimeoVideo('106036638'))
           
+#     def getsetfilepath(self,file):
+#         return (os.path.splitext(file)[0] + '.set')
     def getsetfilepath(self,file):
-        return (os.path.splitext(file)[0] + '.set')
+        file_Path, file_Extension = os.path.splitext(file)
+        if   file_Extension ==  '.gz':
+            file_Path = os.path.splitext(file_Path)[0]
+        elif file_Extension != '.dat':
+            print 'Wrong file extension'
+#         print file_Path
+        return (file_Path + '.set')
 
     def makethumbnail(self, file,override=False,style=[]):
         #create a thumbnail and store it in the same directory and in the thumbnails dir for local file serving, override options for if file already exists

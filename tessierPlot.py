@@ -17,7 +17,7 @@ import pandas as pd
 import numpy as np
 import math
 import tessierView as tv
-
+from canopener.core import canopener
 
 import re
 import os
@@ -562,7 +562,7 @@ class plotR:
 		
 	def parseheader(self,file):
 		skipindex = 0
-		with open(file) as f:	
+		with canopener(file) as f:	
 			for i, line in enumerate(f):
 				if i < 3:
 					continue
@@ -573,9 +573,9 @@ class plotR:
 				if i > 300:
 					break
 		#nog een keer dunnetjes overdoen met read()
-		f = open(file)
+		f = canopener(file)
 		alltext= f.read(skipindex)		
-		with open(file) as myfile:
+		with canopener(file) as myfile:
 			alltext = [next(myfile) for x in xrange(skipindex)]
 		alltext= ''.join(alltext)
 	
@@ -658,7 +658,7 @@ class plotR:
 
 def parseheader(file):
 		skipindex = 0
-		with open(file) as f:	
+		with canopener(file) as f:	
 			for i, line in enumerate(f):
 				if i < 3:
 					continue
@@ -669,9 +669,9 @@ def parseheader(file):
 				if i > 300:
 					break
 		#nog een keer dunnetjes overdoen met read()
-		f = open(file)
+		f = canopener(file)
 		alltext= f.read(skipindex)		
-		with open(file) as myfile:
+		with canopener(file) as myfile:
 			alltext = [next(myfile) for x in xrange(skipindex)]
 		alltext= ''.join(alltext)
 	
