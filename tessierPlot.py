@@ -160,7 +160,7 @@ class plotR:
 
 	def quickplot(self,**kwargs):
 		nDim = self.ndim
-		#if the uniques of a dimension is less than x, plot in consequential 2d, otherwise 3d
+		#if the uniques of a dimension is less than x, plot in sequential 2d, otherwise 3d
 
 		#maybe put logic here to plot some uniques as well from nonsequential axes?
 		filter = self.dims < 5
@@ -170,6 +170,7 @@ class plotR:
 		
 		uniques_col_str = coords[filter]
 		print uniques_col_str
+
 		if len(coords[filter_neg]) > 1: 
 			
 			fig = self.plot3d(uniques_col_str=uniques_col_str,**kwargs)
@@ -216,7 +217,6 @@ class plotR:
 		uniques_col = []
 		self.uniques_per_col=[]
 		self.data = self.data.dropna(how='any')
-		sweepdirection = self.data[cols[-2]].iloc[0] > self.data[cols[-2]].iloc[1] #True is sweep neg to pos
 
 				
 
@@ -246,20 +246,24 @@ class plotR:
 			if n_index != None:
 				if j not in n_index:
 					continue
-			sluicy = filterdata.loc[ind]
-			slicy = sluicy
-			#magic follows:
-			#get the last columns, and exclude uniques_cols
-			us=uniques_col_str
-			if len(uniques_col_str) > 0:
-				b=[ slicy.columns!=u for u in us]
-				c = reduce(lambda x,y: np.logical_and(x,y), b)
-				slicy = slicy[slicy.columns[c]]
-					
-			x=slicy.iloc[:,-3]
-			y=slicy.iloc[:,-2]
-			z=slicy.iloc[:,-1]
+			data_byuniques = filterdata.loc[ind]
+			data_slice = data_byuniques
 
+			#get the columns /not/ corresponding to uniques_cols
+			#find the coord_keys in the header
+			coord_keys = np.array([x['name'] for x in self.header if x['type']=='coordinate'])
+			
+			#filter out the keys corresponding to unique value columns
+			us=uniques_col_str		
+			coord_keys = [key for key in coord_keys if key not in uniques_col_str ]
+			#now find out if there are multiple value axes
+			value_keys = [i['name'] for i in self.header if i['type']=='value']
+			
+
+			x=data_slice.loc[:,coord_keys[-2]]
+			y=data_slice.loc[:,coord_keys[-1]]
+			z=data_slice.loc[:,value_keys[-1]] #only plot the last value in the values column for now
+			
 			xu = np.size(x.unique())
 			yu = np.size(y.unique())
 			
@@ -278,7 +282,7 @@ class plotR:
 
 			#sorting sorts negative to positive, so beware:
 			#sweep direction determines which part of array should be cut off
-			if sweepdirection != sweepoverride: ##if sweep True, override the detect value
+			if sweepoverride: ##if sweep True, override the detect value
 				z = z[-xu*yu:]
 				x = x[-xu*yu:]
 				y = y[-xu*yu:]
@@ -331,7 +335,7 @@ class plotR:
 				style = list([style])
 
 
-			measAxisDesignation = parseUnitAndNameFromColumnName(self.data.keys()[-1])
+			measAxisDesignation = parseUnitAndNameFromColumnName(value_keys[-1])
 			#wrap all needed arguments in a datastructure
 			cbar_quantity = measAxisDesignation[0]
 			cbar_unit = measAxisDesignation[1]
@@ -379,16 +383,16 @@ class plotR:
 
 
 			if 'flipaxes' in style:
-				ax.set_xlabel(slicy.columns[-2])
-				ax.set_ylabel(slicy.columns[-3])
+				ax.set_xlabel(coord_keys[-1])
+				ax.set_ylabel(coord_keys[-2])
 			else:
-				ax.set_xlabel(slicy.columns[-3])
-				ax.set_ylabel(slicy.columns[-2])
+				ax.set_xlabel(coord_keys[-2])
+				ax.set_ylabel(coord_keys[-1])
 							
 
 			title = ''
 			for i in uniques_col_str:
-				title = '\n'.join([title, '{:s}: {:g} (mV)'.format(i,getattr(sluicy,i).iloc[0])])
+				title = '\n'.join([title, '{:s}: {:g} (mV)'.format(i,getattr(data_byuniques,i).iloc[0])])
 			print(title)
 			if 'notitle' not in style:
 				ax.set_title(title)
@@ -437,20 +441,18 @@ class plotR:
 	
 		uniques_col = []
 	
+		
+		coord_keys = [i['name'] for i in self.header if i['type']=='coordinate' ]
+		value_keys = [i['name'] for i in self.header if i['type']=='value' ]
 		#assume 2d plots with data in the two last columns
-		uniques_col_str = [i['name'] for i in self.header if i['type']=='coordinate' ][:-1]    
-	
-		reg = re.compile(r'\{(.*?)\}')
-		parsedcols = []
+		uniques_col_str = coord_keys[:-1]
+		
+		
+		uniques_axis_designations = []
 		#do some filtering of the colstr to get seperate name and unit of said name
 		for a in uniques_col_str:
-			z = reg.findall(a)
-			if len(z) > 0:
-				parsedcols.append(z[0])
-			else:
-				parsedcols.append('')
-			#name is first
-
+			uniques_axis_designations.append(parseUnitAndNameFromColumnName(a))
+				
 		
 		for i in uniques_col_str:
 			col = getattr(self.data,i)
@@ -467,22 +469,22 @@ class plotR:
 			filtereddata = self.data.loc[j]
 			title =''
 			for i,z in enumerate(uniques_col_str):
-				title = '\n'.join([title, '{:s}: {:g} (mV)'.format(parsedcols[i],getattr(filtereddata,z).iloc[0])])
+				title = '\n'.join([title, '{:s}: {:g} (mV)'.format(uniques_axis_designations[i],getattr(filtereddata,z).iloc[0])])
 
-			x =  np.array(filtereddata.iloc[:,-2])
-			y =  np.array(filtereddata.iloc[:,-1])
+			x =  np.array(filtereddata.loc[:,coord_keys[-1]])
+			y =  np.array(filtereddata.loc[:,value_keys[-1]])
 	
 			wrap = tstyle.getPopulatedWrap(style)
 			wrap['XX'] = y
 			tstyle.processStyle(style,wrap)
 			ax = plt.plot(x,wrap['XX'],label=title,**kwargs)
-			self.XX = wrap['XX']	
+				
 		
 		plt.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3,
 			   ncol=2, mode="expand", borderaxespad=0.)
 		ax = self.fig.axes[0]
-		xaxislabel = parseUnitAndNameFromColumnName(self.header[-2]['name'])
-		yaxislabel = parseUnitAndNameFromColumnName(self.header[-1]['name'])
+		xaxislabel = parseUnitAndNameFromColumnName(coord_keys[-1])
+		yaxislabel = parseUnitAndNameFromColumnName(value_keys[-1])
 		
 		ax.set_xlabel(xaxislabel[0]+'(' + xaxislabel[1] +')')
 		ax.set_ylabel(yaxislabel[0]+'(' + yaxislabel[1] +')')
@@ -508,11 +510,14 @@ class plotR:
 		return self.filterdata
 		
 	def getnDimFromData(self):
+		#returns the 
 		dims = np.array(self.getdimFromData())
 		nDim = len(dims[dims > 1])
 		return nDim
 	
 	def getdimFromData(self):
+		#returns an array with the amount of unique values of each coordinate column
+		
 		dims = np.array([],dtype='int')
 		filterdata = self.sortdata()
 		#first determine the columns belong to the axes (not measure) coordinates
