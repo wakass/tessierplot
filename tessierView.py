@@ -82,15 +82,13 @@ class tessierView(object):
         print 'You are now watching through the glasses of ideology'
         display(VimeoVideo('106036638'))
           
-#     def getsetfilepath(self,file):
-#         return (os.path.splitext(file)[0] + '.set')
     def getsetfilepath(self,file):
         file_Path, file_Extension = os.path.splitext(file)
         if   file_Extension ==  '.gz':
             file_Path = os.path.splitext(file_Path)[0]
         elif file_Extension != '.dat':
             print 'Wrong file extension'
-#         print file_Path
+
         return (file_Path + '.set')
 
     def makethumbnail(self, file,override=False,style=[]):
@@ -124,7 +122,18 @@ class tessierView(object):
         pylab.rcParams = rcP_old
 
         return thumbfile  
-    
+
+
+    def walklevel(self,some_dir, level=1):
+        some_dir = some_dir.rstrip(os.path.sep)
+        assert os.path.isdir(some_dir)
+        num_sep = some_dir.count(os.path.sep)
+        for root, dirs, files in os.walk(some_dir):
+            yield root, dirs, files
+            num_sep_this = root.count(os.path.sep)
+            if num_sep + level <= num_sep_this:
+                del dirs[:]
+            
     def walk(self,filemask,filterstring,**kwargs):
         paths = (self._root,)
         images = 0
@@ -132,19 +141,24 @@ class tessierView(object):
     
         reg = re.compile(self._filemask) #get only files determined by filemask
     
-        for dirname,dirnames,filenames in chain.from_iterable(os.walk(path) for path in paths):
+        for root,dirnames,filenames in chain.from_iterable(os.walk(path) for path in paths):
+            matches = []
+            #in the current directory find all files matching the filemask
             for filename in filenames:
-                fullpath = os.path.join(dirname,filename)
+                fullpath = os.path.join(root,filename)
                 #print fullpath
                 res = reg.findall(filename)
-                
-                if res: #found a file that matches the filemask
-                    if filterstring in open(self.getsetfilepath(fullpath)).read():   #liable for improvement
-                    #check for certain parameters with filterstring in the set file: e.g. 'dac4: 1337.0'
-                        thumbpath = self.makethumbnail(fullpath,**kwargs)
-                        if thumbpath:
-                            self._allthumbs.append({'datapath':fullpath,'thumbpath':thumbpath})
-                            images += 1
+                if res:
+                    matches.append(fullpath)
+            #found at least one file that matches the filemask
+            if matches: 
+                fullpath = matches[0]                
+                if filterstring in open(self.getsetfilepath(fullpath)).read():   #liable for improvement
+                #check for certain parameters with filterstring in the set file: e.g. 'dac4: 1337.0'
+                    thumbpath = self.makethumbnail(fullpath,**kwargs)
+                    if thumbpath:
+                        self._allthumbs.append({'datapath':fullpath,'thumbpath':thumbpath})
+                        images += 1
                             
         return self._allthumbs
     def _ipython_display_(self):

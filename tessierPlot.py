@@ -17,7 +17,6 @@ import pandas as pd
 import numpy as np
 import math
 import tessierView as tv
-from canopener.core import canopener
 
 import re
 import os
@@ -565,9 +564,20 @@ class plotR:
 		if state == None:
 			toggleFiddle()
 		
+	def opener(self,filename):
+		import gzip
+		f = open(filename,'rb')
+		if (f.read(2) == '\x1f\x8b'):
+			f.seek(0)
+			return gzip.GzipFile(fileobj=f)
+		else:
+			f.seek(0)
+			return f
+
 	def parseheader(self,file):
 		skipindex = 0
-		with canopener(file) as f:	
+		
+		with self.opener(file) as f:	
 			for i, line in enumerate(f):
 				if i < 3:
 					continue
@@ -578,9 +588,9 @@ class plotR:
 				if i > 300:
 					break
 		#nog een keer dunnetjes overdoen met read()
-		f = canopener(file)
+		f = self.opener(file)
 		alltext= f.read(skipindex)		
-		with canopener(file) as myfile:
+		with self.opener(file) as myfile:
 			alltext = [next(myfile) for x in xrange(skipindex)]
 		alltext= ''.join(alltext)
 	
@@ -621,6 +631,7 @@ class plotR:
 		self.header = header
 		
 		return np.array(header),skipindex
+
 	
 	def exportToMtx(self):
 
@@ -661,9 +672,19 @@ class plotR:
 			data.tofile(fid)
 			fid.close()
 
+def opener(self,filename):
+	import gzip
+	f = open(filename,'rb')
+	if (f.read(2) == '\x1f\x8b'):
+		f.seek(0)
+		return gzip.GzipFile(fileobj=f)
+	else:
+		f.seek(0)
+		return f
+
 def parseheader(file):
 		skipindex = 0
-		with canopener(file) as f:	
+		with opener(file) as f:	
 			for i, line in enumerate(f):
 				if i < 3:
 					continue
@@ -674,9 +695,9 @@ def parseheader(file):
 				if i > 300:
 					break
 		#nog een keer dunnetjes overdoen met read()
-		f = canopener(file)
+		f = opener(file)
 		alltext= f.read(skipindex)		
-		with canopener(file) as myfile:
+		with opener(file) as myfile:
 			alltext = [next(myfile) for x in xrange(skipindex)]
 		alltext= ''.join(alltext)
 	
