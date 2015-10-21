@@ -200,6 +200,7 @@ class plotR:
 						clim='auto',
 						aspect='auto',
 						interpolation='none',
+						value_axis=-1,
 						sweepoverride=False,
 						cbar_orientation='vertical',
 						cbar_location ='normal',
@@ -261,7 +262,7 @@ class plotR:
 
 			x=data_slice.loc[:,coord_keys[-2]]
 			y=data_slice.loc[:,coord_keys[-1]]
-			z=data_slice.loc[:,value_keys[-1]] #only plot the last value in the values column for now
+			z=data_slice.loc[:,value_keys[value_axis]] #only plot the last value in the values column for now
 			
 			xu = np.size(x.unique())
 			yu = np.size(y.unique())
@@ -334,7 +335,7 @@ class plotR:
 				style = list([style])
 
 
-			measAxisDesignation = parseUnitAndNameFromColumnName(value_keys[-1])
+			measAxisDesignation = parseUnitAndNameFromColumnName(value_keys[value_axis])
 			#wrap all needed arguments in a datastructure
 			cbar_quantity = measAxisDesignation[0]
 			cbar_unit = measAxisDesignation[1]
@@ -427,7 +428,7 @@ class plotR:
 		self.toggleLinedraw()
 		return self.fig
 	
-	def plot2d(self,fiddle=False,n_index=None,style=['normal'],**kwargs): #previously scanplot
+	def plot2d(self,fiddle=False,n_index=None,value_axis = -1,style=['normal'],**kwargs): #previously scanplot
 		# scanplot(file,fig=None,n_index=None,style=[],data=None,**kwargs):
 		# kwargs go into matplotlib/pyplot plot command
 		# fiddle for compatibility with tessierView only
@@ -471,7 +472,7 @@ class plotR:
 				title = '\n'.join([title, '{:s}: {:g} (mV)'.format(uniques_axis_designations[i],getattr(filtereddata,z).iloc[0])])
 
 			x =  np.array(filtereddata.loc[:,coord_keys[-1]])
-			y =  np.array(filtereddata.loc[:,value_keys[-1]])
+			y =  np.array(filtereddata.loc[:,value_keys[value_axis]])
 	
 			wrap = tstyle.getPopulatedWrap(style)
 			wrap['XX'] = y
@@ -483,11 +484,49 @@ class plotR:
 			   ncol=2, mode="expand", borderaxespad=0.)
 		ax = self.fig.axes[0]
 		xaxislabel = parseUnitAndNameFromColumnName(coord_keys[-1])
-		yaxislabel = parseUnitAndNameFromColumnName(value_keys[-1])
+		yaxislabel = parseUnitAndNameFromColumnName(value_keys[value_axis])
 		
 		ax.set_xlabel(xaxislabel[0]+'(' + xaxislabel[1] +')')
 		ax.set_ylabel(yaxislabel[0]+'(' + yaxislabel[1] +')')
 		return self.fig
+		
+	def get_coordkeys(self):
+		coord_keys = [i['name'] for i in self.header if i['type']=='coordinate' ]
+		return coord_keys
+	def get_valuekeys(self):
+		value_keys = [i['name'] for i in self.header if i['type']=='value' ]
+		return value_keys
+	def starplot(self,style=[]):
+		if not self.fig:
+			self.fig = plt.figure()
+		
+		if self.data is None:
+			self.loadFile(file)
+			
+		data=self.data
+		coordkeys = self.get_coordkeys()
+		valuekeys = self.get_valuekeys()
+		
+		coordkeys_notempty=[k for k in coordkeys if len(data[k].unique()) > 1]
+		n_subplots = len(coordkeys_notempty)
+		width =2
+		import matplotlib.gridspec as gridspec
+		gs = gridspec.GridSpec(int(n_subplots/width)+n_subplots%width, width)
+
+		
+		for n,k in enumerate(coordkeys_notempty):
+			ax = plt.subplot(gs[n])
+			for v in valuekeys:
+				y= data[v]
+				
+				wrap = tstyle.getPopulatedWrap(style)
+				wrap['XX'] = y
+				tstyle.processStyle(style,wrap)
+				
+				ax.plot(data[k], wrap['XX'])
+			ax.set_title(k)
+		return self.fig
+
 	def guessStyle(self):
 		style=[]
 		#autodeinterlace function
@@ -672,7 +711,7 @@ class plotR:
 			data.tofile(fid)
 			fid.close()
 
-def opener(self,filename):
+def opener(filename):
 	import gzip
 	f = open(filename,'rb')
 	if (f.read(2) == '\x1f\x8b'):
@@ -682,64 +721,3 @@ def opener(self,filename):
 		f.seek(0)
 		return f
 
-def parseheader(file):
-		skipindex = 0
-		with opener(file) as f:	
-			for i, line in enumerate(f):
-				if i < 3:
-					continue
-				if i > 5:
-					if line[0] != '#': #find the skiprows accounting for the first linebreak in the header
-						skipindex = i
-						break
-				if i > 300:
-					break
-		#nog een keer dunnetjes overdoen met read()
-		f = opener(file)
-		alltext= f.read(skipindex)		
-		with opener(file) as myfile:
-			alltext = [next(myfile) for x in xrange(skipindex)]
-		alltext= ''.join(alltext)
-	
-		#doregex
-		coord_expression = re.compile(r"""
-									^\#\s*Column\s(.*?)\:
-									[\r\n]{0,2}
-									\#\s*end\:\s(.*?)
-									[\r\n]{0,2}
-									\#\s*name\:\s(.*?)
-									[\r\n]{0,2}
-									\#\s*size\:\s(.*?)
-									[\r\n]{0,2}
-									\#\s*start\:\s(.*?)
-									[\r\n]{0,2}
-									\#\s*type\:\s(.*?)[\r\n]{0,2}$ 
-									
-									"""#annoying \r's...
-									,re.VERBOSE |re.MULTILINE)
-		
-		val_expression = re.compile(r"""
-									^\#\s*Column\s(.*?)\:
-									[\r\n]{0,2}
-									\#\s*name\:\s(.*?)
-									[\r\n]{0,2}
-									\#\s*type\:\s(.*?)[\r\n]{0,2}$
-									"""
-									,re.VERBOSE |re.MULTILINE)
-		coord=  coord_expression.findall(alltext) 
-		val  = val_expression.findall(alltext)
-		coord = [ zip(('column','end','name','size','start','type'),x) for x in coord]
-		coord = [dict(x) for x in coord]
-		val = [ zip(('column','name','type'),x) for x in val]
-		val = [dict(x) for x in val]
-		
-		header=coord+val
-
-		
-		return np.array(header),skipindex
-def loadFile(file):
-
-	header,skiprows = parseheader(file)
-	data = pd.read_csv(file, sep='\t', comment='#',skiprows=skiprows,names=[i['name'] for i in header])
-	data.name = file
-	return data

@@ -42,9 +42,16 @@ def helper_deinterlace1(w):
 
 def helper_mov_avg(w):
 	(m, n) = (int(w['mov_avg_m']), int(w['mov_avg_n']))     # The shape of the window array
-	win = np.ones((m, n))
+	
+	data = w['XX']
+	if data.ndim == 1:
+		win = np.ones((m,))
+		w['XX'] = moving_average_1d(w['XX'], win)
+	else:
+		win = np.ones((m, n))
+		w['XX'] = moving_average_2d(w['XX'], win)
 	#win = signal.kaiser(m,8.6,sym=False)
-	w['XX'] = moving_average_2d(w['XX'], win)
+	
 
 def helper_savgol(w):
 	'''Perform Savitzky-Golay smoothing'''
@@ -54,15 +61,11 @@ def helper_savgol(w):
 def helper_didv(w):
 	a=(w['XX'])
 
-# 	if len(a.shape) == a.ndim: #if 1D 
-# 		print '1d'
-# 		w['XX'] = np.diff(w['XX'])
-# 		print np.shape(w['XX'])
-# 		w['XX'] = np.append(w['XX'],w['XX'][-1])
-# 
-# 		print np.shape(w['XX'])
-# 	else:
-	w['XX'] = np.diff(w['XX'],axis=1)
+	if a.ndim == 1: #if 1D 
+		w['XX'] = np.diff(w['XX'])
+		w['XX'] = np.append(w['XX'],w['XX'][-1])
+	else:
+		w['XX'] = np.diff(w['XX'],axis=1)
 	#1 nA / 1 mV = 0.0129064037 conductance quanta
 	w['XX'] = w['XX'] / w['ystep'] * 0.0129064037
 	w['cbar_quantity'] = 'dI/dV'
@@ -346,6 +349,21 @@ def moving_average_2d(data, window):
     # (mode='same') and symmetrical boundary conditions are assumed
     # (boundary='symm').
     return signal.convolve2d(data, window, mode='same', boundary='symm')
+
+def moving_average_1d(data, window):
+    """Moving average on two-dimensional data.
+    """
+    # Makes sure that the window function is normalized.
+    window /= window.sum()
+    # Makes sure data array is a numpy array or masked array.
+    if type(data).__name__ not in ['ndarray', 'MaskedArray']:
+        data = np.asarray(data)
+
+    # The output array has the same dimensions as the input data
+    # (mode='same') and symmetrical boundary conditions are assumed
+    # (boundary='symm').
+    return signal.convolve(data, window, mode='same')
+
 
 def get_offset(x,y1,y2):
 #     plt.figure(43)
