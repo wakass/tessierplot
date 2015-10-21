@@ -66,39 +66,7 @@ def getnDimFromData(file,data):
 # 			self.uniques_per_col.append(list(col.unique()))
 		return nDim
 	
-	
-def starplot(file,fig=None,style=[],n_index=None):
-	names,skiprows=parseheader(file)
-	dat = loadFile(file)
-	# dat=dat.dropna(how='any') #not doing this somehow prevent a line drawn from the beginning to the end of the line?
 
-	if fig == None:
-		fig = plt.figure()
-	else:
-		fig = plt.figure(fig.number)
-
-	#basically project the first and final dimension
-	cnt= 0
-	for i in range(0,len(dat.keys())-1):
-		n_subplots = len(dat.keys())+1
-		if n_index != None:
-				n_subplots = len(n_index)
-				print n_subplots
-				if i not in n_index:
-					continue
-		title = parseUnitAndNameFromColumnName(dat.keys()[i])
-		cnt=cnt+1
-		ax = plt.subplot(n_subplots,1,cnt)
-		
-		y= (dat[dat.keys()[-1]])
-		wrap = tstyle.getPopulatedWrap(style)
-		wrap['XX'] = y
-		tstyle.processStyle(style,wrap)
-		
-		plt.plot(dat[dat.keys()[i]],wrap['XX'],label=title)
-		plt.legend(loc=9, bbox_to_anchor=(-0.5, 0.7), ncol=3)
-	return fig
-	
 
 def loadCustomColormap(file='./cube1.txt'):
 	do = np.loadtxt(file)
