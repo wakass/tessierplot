@@ -143,7 +143,7 @@ def helper_flipxaxis(w):
 def helper_crosscorr(w):
 	A = w['XX']
 	first = (w['crosscorr_toFirstColumn'])
-
+	
 	B = A.copy() 
 	#x in terms of linetrace, (y in terms of 3d plot)
 	x = np.linspace(w['ext'][2],w['ext'][3],A.shape[1])
@@ -156,7 +156,6 @@ def helper_crosscorr(w):
 
 		B = B[:,peak]
 		x = x[peak]
-
 	for i in range(B.shape[0]-1):
 		#fit all peaks on B and calculate offset
 		if first:
@@ -171,7 +170,7 @@ def helper_crosscorr(w):
 		#modify A (and B for fun?S::S)
 		A[i+1,:] = np.interp(x_org+offset,x_org,A[i+1,:])
 		B[i+1,:] = np.interp(x+offset,x,B[i+1,:])
-	
+		
 	w['XX'] = A
 
 

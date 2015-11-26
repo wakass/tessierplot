@@ -503,8 +503,11 @@ class plotR:
 		#autodidv function
 		y=self.filterdata.iloc[:,-2]
  		if (max(y) == -1*min(y) and max(y) <= 150):
-			style.insert(0,'sgdidv')
- 			style.insert(1,'log')
+ 			style.extend(['mov_avg(m=1,n=15)','didv','mov_avg(m=1,n=15)','abs'])
+# 			style.insert(0,'sgdidv')
+			
+		#default style is 'log'
+		style.append('log')
 		return style
 		
 	def sortdata(self,refresh=False):

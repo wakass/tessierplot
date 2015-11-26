@@ -163,6 +163,9 @@ class tessierView(object):
         return self._allthumbs
     def _ipython_display_(self):
         display_html(HTML(self.genhtml(refresh=False)))
+        from IPython.display import Javascript,display_javascript
+        a = Javascript('jump(\'#endofpage\')')
+        display_javascript(a)
     
     def htmlout(self,refresh=False):
         display(HTML(self.genhtml(refresh=refresh)))
@@ -193,6 +196,9 @@ class tessierView(object):
             <div class="output_subarea output_png output_result">
  -->
      <div class='thumb'>
+                {% if loop.index == items|length %}
+				 <a name="#endofpage"></a>
+				{% endif %}
                 <img  class="ui-resizable" src="{{ item.thumbpath }}"/> 
 
 
@@ -219,6 +225,7 @@ class tessierView(object):
                 <option value="{{"[\\'savgol\\',\\'log\\']"|e}}">savgol,log</option>
                 <option value="{{"[\\'sgdidv\\']"|e}}">sgdidv</option>
                 <option value="{{" [\\'sgdidv\\',\\'log\\']"|e}} ">sgdidv,log</option>
+                <option value="{{" [\\'mov_avg(m=1,n=15)\\',\\'didv\\',\\'mov_avg(m=1,n=15)\\',\\'abs\\',\\'log\\' ]"|e}} ">Ultrasmooth didv</option>
                 <option value="{{" [\\'mov_avg\\',\\'didv\\',\\'abs\\']"|e}} ">mov_avg,didv,abs</option>
                 <option value="{{" [\\'mov_avg\\',\\'didv\\',\\'abs\\',\\'log\\']"|e}} ">mov_avg,didv,abs,log</option>
                 <option value="{{" [\\'deinterlace\\']"|e}} ">deinterlace</option>
@@ -244,6 +251,11 @@ class tessierView(object):
                 var kernel = IPython.notebook.kernel;
                 var callbacks = { 'iopub' : {'output' : handle_output}};
                 var msg_id = kernel.execute(exec, callbacks, {silent:false});
+            }
+            function jump(h){
+                var url = location.href;               //Save down the URL without hash.
+                location.href = "#"+h;                 //Go to the target element.
+                history.replaceState(null,null,url);   //Don't like hashes. Changing it back.
             }
             function tovar(id) {
                 exec =' file \= \"' + id + '\"';
