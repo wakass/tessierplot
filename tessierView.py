@@ -228,7 +228,7 @@ class tessierView(object):
                 <option value="{{" [\\'mov_avg(m=1,n=15)\\',\\'didv\\',\\'mov_avg(m=1,n=15)\\',\\'abs\\',\\'log\\' ]"|e}} ">Ultrasmooth didv</option>
                 <option value="{{" [\\'mov_avg\\',\\'didv\\',\\'abs\\']"|e}} ">mov_avg,didv,abs</option>
                 <option value="{{" [\\'mov_avg\\',\\'didv\\',\\'abs\\',\\'log\\']"|e}} ">mov_avg,didv,abs,log</option>
-                <option value="{{" [\\'deinterlace\\']"|e}} ">deinterlace</option>
+                <option value="{{" [\\'deinterlace0\\',\\'log\\']"|e}} ">deinterlace</option>
                 <option value="{{" [\\'crosscorr\\']"|e}} ">Crosscorr</option>
             </select>
             

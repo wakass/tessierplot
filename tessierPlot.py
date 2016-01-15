@@ -227,7 +227,6 @@ class plotR:
 			#now find out if there are multiple value axes
 			value_keys = [i['name'] for i in self.header if i['type']=='value']
 			
-
 			x=data_slice.loc[:,coord_keys[-2]]
 			y=data_slice.loc[:,coord_keys[-1]]
 			z=data_slice.loc[:,value_keys[value_axis]] #only plot the last value in the values column for now
@@ -378,7 +377,7 @@ class plotR:
 					if cbar_orientation == 'horizontal':
 						cax = divider.append_axes("top", size="10%", pad=0.05)
 					else:
-						cax = divider.append_axes("right", size="5%", pad=0.05)
+						cax = divider.append_axes("right", size="2.5%", pad=0.05)
 					pos = list(ax.get_position().bounds)
 				if hasattr(self, 'im'):
 					self.cbar = plt.colorbar(self.im, cax=cax,orientation=cbar_orientation)
@@ -394,6 +393,7 @@ class plotR:
 
 		if fiddle: self.toggleFiddle()
 		self.toggleLinedraw()
+		self.toggleLinecut()
 		return self.fig
 	
 	def plot2d(self,fiddle=False,n_index=None,value_axis = -1,style=['normal'],**kwargs): #previously scanplot
@@ -503,7 +503,7 @@ class plotR:
 		#autodidv function
 		y=self.filterdata.iloc[:,-2]
  		if (max(y) == -1*min(y) and max(y) <= 150):
- 			style.extend(['mov_avg(m=1,n=15)','didv','mov_avg(m=1,n=15)','abs'])
+ 			style.extend(['mov_avg(m=1,n=10)','didv','mov_avg(m=1,n=5)','abs'])
 # 			style.insert(0,'sgdidv')
 			
 		#default style is 'log'
@@ -552,7 +552,15 @@ class plotR:
 		action = toolbar.addWidget(self.fig.drawbutton)
 		
 		self.fig.linedraw = self.linedraw
+	def toggleLinecut(self):
+		self.linecut=Linecut(self.fig,self)
 
+		self.fig.cutbutton = toggleButton('cut', self.linecut.connect)
+		topwidget = self.fig.canvas.topLevelWidget()
+		toolbar = topwidget.children()[2]
+		action = toolbar.addWidget(self.fig.cutbutton)
+		
+		self.fig.linecut = self.linecut
 		
 	def toggleFiddle(self):
 		from IPython.core import display

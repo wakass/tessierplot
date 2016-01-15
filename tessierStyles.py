@@ -143,7 +143,6 @@ def helper_flipxaxis(w):
 def helper_crosscorr(w):
 	A = w['XX']
 	first = (w['crosscorr_toFirstColumn'])
-	
 	B = A.copy() 
 	#x in terms of linetrace, (y in terms of 3d plot)
 	x = np.linspace(w['ext'][2],w['ext'][3],A.shape[1])
@@ -166,7 +165,6 @@ def helper_crosscorr(w):
 		next_column = B[i+1,:]
 		
 		offset = get_offset(x,column,next_column)
-# 		print offset	
 		#modify A (and B for fun?S::S)
 		A[i+1,:] = np.interp(x_org+offset,x_org,A[i+1,:])
 		B[i+1,:] = np.interp(x+offset,x,B[i+1,:])
