@@ -281,24 +281,24 @@ class Linecut:
 	def makeLinecut(self,event,vertical=True):
 
 	
-		#get data from plotR object
-		data=self.plotr.XX
-		ext = self.plotr.extent
-		xext = ext[0:2]
-		yext = ext[2:4]
-		x = np.linspace(xext[0],xext[1],data.shape[0])
-		y = np.linspace(yext[0],yext[1],data.shape[1])
+		#get data from the imshow object
+		im = event.inaxes.images[0]
+		data=im.get_array()
+		
+		ext = im.get_extent()
+		x = np.linspace(ext[0],ext[1],data.shape[1])
+		y = np.linspace(ext[3],ext[2],data.shape[0]) #images have origin in topleft?
 		#determine column from mouse data and fig
 		#determine if horizontal or vertical
 		if vertical: 
 			xx = y
 			idx = (np.abs( x -  event.xdata)).argmin()
-			z = data[idx,:]
-			cutline_coords = ([event.xdata,event.xdata],[y[0],y[-1]])
+			z = data[:,idx]
+			cutline_coords = ([event.xdata,event.xdata],[ext[3],ext[2]])
 		else:
 			xx = x
 			idx = (np.abs( y -  event.ydata)).argmin()
-			z = data[:,idx]
+			z = data[idx,:]
 			cutline_coords = ([x[0],x[-1]],[event.ydata,event.ydata])
 			
 		#determine if there's a plot object

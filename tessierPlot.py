@@ -322,10 +322,11 @@ class plotR:
 			cbar_title = cbar_trans_formatted + w['cbar_quantity'] + ' (' + w['cbar_unit'] + ')'
 			if len(w['cbar_trans']) is not 0:
 				cbar_title = cbar_title + ')'
-
+			
+			
 			#postrotate np.rot90
 			XX = np.rot90(XX)
-# 			self.XX = XX
+			
 			if 'deinterlace' in style:
 				self.fig = plt.figure()
 				ax_deinter_odd  = plt.subplot(2, 1, 1)
