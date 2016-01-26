@@ -95,17 +95,19 @@ class tessierView(object):
         #create a thumbnail and store it in the same directory and in the thumbnails dir for local file serving, override options for if file already exists
         thumbfile = getthumbcachepath(file)
         thumbfile_datadir =  getthumbdatapath(file)
-
         try:
             if os.path.exists(thumbfile):
                 thumbnailStale = os.path.getmtime(thumbfile) < os.path.getmtime(file)   #check modified date with file modified date, if file is newer than thumbfile refresh the thumbnail
             if ((not os.path.exists(thumbfile)) or override or thumbnailStale):
                 #now make thumbnail because it doesnt exist or if u need to refresh
                 pylab.rcParams.update(rcP)
-
                 p = ts.plotR(file)
                 if len(p.data) > 20: ##just make sure really unfinished measurements are thrown out
-                    guessStyle = p.guessStyle()
+                    is2d = p.is2d()
+                    if is2d:
+                        guessStyle = ['normal']
+                    else :
+                        guessStyle = p.guessStyle()
                     p.quickplot(style=guessStyle + style)
                     p.fig.savefig(thumbfile,bbox_inches='tight' )
                     p.fig.savefig(thumbfile_datadir,bbox_inches='tight' )
@@ -171,15 +173,17 @@ class tessierView(object):
         display(HTML(self.genhtml(refresh=refresh)))
         
     def genhtml(self,refresh=False):
-        self.walk(self._filemask,'dac',override=refresh)
+        self.walk(self._filemask,'dac',override=False) #Change override to True if you want forced refresh of thumbs
         #unobfuscate the file relative to the working directory
         #since files are served from ipyhton notebook from ./files/
         all_relative = [{ 'thumbpath':'./files/'+os.path.relpath(k['thumbpath'],start=os.getcwd()),'datapath':k['datapath'] } for k in self._allthumbs]
-        #print all_relative
+        #HTML("<style>.container { width:100% !important; }</style>")
+		#print all_relative
         # print all_relative
         out=u"""
 
-        <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+        <style>.container { width:75% !important; }</style>
+		<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
         <meta http-equiv="Pragma" content="no-cache"> 
         <meta http-equiv="Expires" content="0">
         
@@ -324,7 +328,7 @@ class tessierView(object):
         </script>
         
         <style type="text/css">
-        @media (min-width: 30em) {
+        @media (min-width: 5em) {
             .row { width: auto; display: table; table-layout: fixed; }
             .col { display: table-cell;  width: auto;  }
         }

@@ -125,11 +125,27 @@ class plotR:
 		self.bControls = True #boolean controlling state of plot manipulation buttons
 		
 
-	def quickplot(self,**kwargs):
+	def is2d(self,**kwargs):
 		nDim = self.ndim
 		#if the uniques of a dimension is less than x, plot in sequential 2d, otherwise 3d
 
 		#maybe put logic here to plot some uniques as well from nonsequential axes?
+		filter = self.dims < 5
+		filter_neg = np.array([not x for x in filter])
+
+		coords = np.array([x['name'] for x in self.header if x['type']=='coordinate'])
+		
+		if len(coords[filter_neg]) > 1: 
+			return False
+		else:
+			return True
+	
+	def quickplot(self,**kwargs):
+		nDim = self.ndim
+		#if the uniqueness of a dimension is less than x, plot in sequential 2d, otherwise 3d
+
+		#maybe put logic here to plot some uniques as well from nonsequential axes?
+		#on the other hand, logic is for silly people
 		filter = self.dims < 5
 		filter_neg = np.array([not x for x in filter])
 
@@ -505,10 +521,10 @@ class plotR:
 		y=self.filterdata.iloc[:,-2]
  		if (max(y) == -1*min(y) and max(y) <= 150):
  			style.extend(['mov_avg(m=1,n=10)','didv','mov_avg(m=1,n=5)','abs'])
-# 			style.insert(0,'sgdidv')
+ 			style.insert(0,'sgdidv')
 			
 		#default style is 'log'
-		style.append('log')
+		style.insert(0, 'log')
 		return style
 		
 	def sortdata(self,refresh=False):
