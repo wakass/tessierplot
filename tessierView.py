@@ -90,10 +90,10 @@ class tessierView(object):
             print 'Wrong file extension'
 
         return (file_Path + '.set')
-
     def makethumbnail(self, file,override=False,style=[]):
         #create a thumbnail and store it in the same directory and in the thumbnails dir for local file serving, override options for if file already exists
         thumbfile = getthumbcachepath(file)
+        #print file
         thumbfile_datadir =  getthumbdatapath(file)
         try:
             if os.path.exists(thumbfile):
@@ -109,6 +109,12 @@ class tessierView(object):
                     else :
                         guessStyle = p.guessStyle()
                     p.quickplot(style=guessStyle + style)
+                    #measname = thumbfile.rsplit('\\',1)
+                    #measname = measname[1].rsplit('_',1)
+                    #measname = measname[0].split('_',1)
+                    #measname = measname[1]
+                    #print measname
+                    #p.fig.suptitle(measname, fontsize=12)
                     p.fig.savefig(thumbfile,bbox_inches='tight' )
                     p.fig.savefig(thumbfile_datadir,bbox_inches='tight' )
                     plt.close(p.fig)
@@ -123,7 +129,7 @@ class tessierView(object):
         #put back the old settings
         pylab.rcParams = rcP_old
 
-        return thumbfile  
+        return thumbfile
 
 
     def walklevel(self,some_dir, level=1):
@@ -140,9 +146,9 @@ class tessierView(object):
         paths = (self._root,)
         images = 0
         self.allthumbs = []
-    
+        ding = []
         reg = re.compile(self._filemask) #get only files determined by filemask
-    
+        i = 0
         for root,dirnames,filenames in chain.from_iterable(os.walk(path) for path in paths):
             matches = []
             #in the current directory find all files matching the filemask
@@ -154,14 +160,24 @@ class tessierView(object):
                     matches.append(fullpath)
             #found at least one file that matches the filemask
             if matches: 
-                fullpath = matches[0]                
+                fullpath = matches[0]
+                measname = matches[0].rsplit('.',1)
+                measname = measname[0].rsplit('\\',1)
+                measname = measname[1]
+                
+                datedir = matches[0].rsplit('\\',3)
+                datedir = datedir[1]
+                
+
                 if filterstring in open(self.getsetfilepath(fullpath)).read():   #liable for improvement
                 #check for certain parameters with filterstring in the set file: e.g. 'dac4: 1337.0'
                     thumbpath = self.makethumbnail(fullpath,**kwargs)
                     if thumbpath:
-                        self._allthumbs.append({'datapath':fullpath,'thumbpath':thumbpath})
+                        #print dirnames
+                        self._allthumbs.append({'datapath':fullpath,'thumbpath':thumbpath, 'datedir':datedir, 'measname':measname})
                         images += 1
                             
+        #print ding
         return self._allthumbs
     def _ipython_display_(self):
         display_html(HTML(self.genhtml(refresh=False)))
@@ -176,24 +192,34 @@ class tessierView(object):
         self.walk(self._filemask,'dac',override=False) #Change override to True if you want forced refresh of thumbs
         #unobfuscate the file relative to the working directory
         #since files are served from ipyhton notebook from ./files/
-        all_relative = [{ 'thumbpath':'./files/'+os.path.relpath(k['thumbpath'],start=os.getcwd()),'datapath':k['datapath'] } for k in self._allthumbs]
+        all_relative = [{ 'thumbpath':'./files/'+os.path.relpath(k['thumbpath'],start=os.getcwd()),'datapath':k['datapath'], 'datedir':k['datedir'], 'measname':k['measname'] } for k in self._allthumbs]
         #HTML("<style>.container { width:100% !important; }</style>")
-		#print all_relative
+        #print thumbpath
+        #print self._allthumbs
         # print all_relative
         out=u"""
 
         <style>.container { width:75% !important; }</style>
-		<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+        <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
         <meta http-equiv="Pragma" content="no-cache"> 
         <meta http-equiv="Expires" content="0">
         
         <div>
+    
+    {% set columncount = 0 %}
     {% for item in items %}
-
-    {% if loop.index % 3 == 1 %}
+    {% if lastdatedir != item.datedir %}
+        </div>
+        <div class='datedirrow'>
+        <p><b><font size = '5'>{{ item.datedir }}</font></b></p>
+        </div>
+        {% set columncount = 0 %}
+    {% endif %}
+    {% set columncount = columncount + 1 %}
+    {% if columncount % 3 == 1 %}
         <div class='row'>
     {% endif %}
-
+    {% set lastdatedir = item.datedir %}
         <div class='col'>
 <!-- 
         <div class="output_area">
@@ -201,11 +227,10 @@ class tessierView(object):
  -->
      <div class='thumb'>
                 {% if loop.index == items|length %}
-				 <a name="#endofpage"></a>
-				{% endif %}
+                <a name="#endofpage"></a>
+                {% endif %}
+                <p><b><font size = '2'>{{ item.measname }}</font></b></p>
                 <img  class="ui-resizable" src="{{ item.thumbpath }}"/> 
-
-
                 <div class="ui-resizable-handle ui-resizable-e" style="z-index: 90; display: none;"></div>
                 <div class="ui-resizable-handle ui-resizable-s" style="z-index: 90; display: none;"></div>  
                 <div class="ui-resizable-handle ui-resizable-se ui-icon ui-icon-gripsmall-diagonal-se" style="z-index: 90; display: none;"></div>
@@ -225,6 +250,7 @@ class tessierView(object):
             <form name='{{ item.datapath }}'>
             <select name="selector">
                 <option value="{{"[\\'\\']"|e}}">normal</option>
+                <option value="{{"[\\'abs\\']"|e}}">abs</option>
                 <option value="{{"[\\'log\\']"|e}}">log</option>
                 <option value="{{"[\\'savgol\\',\\'log\\']"|e}}">savgol,log</option>
                 <option value="{{"[\\'sgdidv\\']"|e}}">sgdidv</option>
@@ -239,7 +265,7 @@ class tessierView(object):
             </form>            
             </div>
         </div>
-    {% if loop.index % 3 == 0 %}
+    {% if columncount % 3 == 0 %}
         </div>
     {% endif %}
     {% endfor %}    
@@ -329,8 +355,9 @@ class tessierView(object):
         
         <style type="text/css">
         @media (min-width: 5em) {
-            .row { width: auto; display: table; table-layout: fixed; }
-            .col { display: table-cell;  width: auto;  }
+            .row { width: auto; display: table; table-layout: fixed; padding-top: 1em;}
+            .col { display: table-cell;  width: auto;  word-break:break-all; padding-right: 1em;}
+            .datedirrow { width: 100%; display: table; table-layout: fixed; border-bottom: 2pt solid black; line-height: 100%; padding-top: 2em;}
         }
         img{
             width:100%;
@@ -341,4 +368,4 @@ class tessierView(object):
         temp = jj.Template(out)
 
         plotcommand = """import tessierPlot as ts; reload(ts); p = ts.plotR(file); p.quickplot(style= %s) """      
-        return temp.render(items=all_relative,plotcommand=plotcommand)
+        return temp.render(items=all_relative,plotcommand=plotcommand, lastdatedir='')
