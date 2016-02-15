@@ -146,9 +146,7 @@ class tessierView(object):
         paths = (self._root,)
         images = 0
         self.allthumbs = []
-        ding = []
         reg = re.compile(self._filemask) #get only files determined by filemask
-        i = 0
         for root,dirnames,filenames in chain.from_iterable(os.walk(path) for path in paths):
             matches = []
             #in the current directory find all files matching the filemask
@@ -189,7 +187,7 @@ class tessierView(object):
         display(HTML(self.genhtml(refresh=refresh)))
         
     def genhtml(self,refresh=False):
-        self.walk(self._filemask,'dac',override=False) #Change override to True if you want forced refresh of thumbs
+        self.walk(self._filemask,'dac',override=refresh) #Change override to True if you want forced refresh of thumbs
         #unobfuscate the file relative to the working directory
         #since files are served from ipyhton notebook from ./files/
         all_relative = [{ 'thumbpath':'./files/'+os.path.relpath(k['thumbpath'],start=os.getcwd()),'datapath':k['datapath'], 'datedir':k['datedir'], 'measname':k['measname'] } for k in self._allthumbs]
@@ -368,4 +366,4 @@ class tessierView(object):
         temp = jj.Template(out)
 
         plotcommand = """import tessierPlot as ts; reload(ts); p = ts.plotR(file); p.quickplot(style= %s) """      
-        return temp.render(items=all_relative,plotcommand=plotcommand, lastdatedir='')
+        return temp.render(items=all_relative,plotcommand=plotcommand)
