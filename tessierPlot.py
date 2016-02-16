@@ -12,6 +12,8 @@ from mpl_toolkits.mplot3d import Axes3D
 from matplotlib import cm
 from matplotlib.widgets import Button,Line2D
 from scipy.signal import argrelmax
+import matplotlib.gridspec as gridspec
+
 
 import pandas as pd
 import numpy as np
@@ -157,22 +159,21 @@ class plotR:
 		return (cminlim,cmaxlim)
 
 		
-	def plot3d(self,fiddle=True,
-						massage_func=None,
+	def plot3d(self,	massage_func=None,
 						uniques_col_str=[],
 						drawCbar=True,
 						subplots_args={'top':0.96, 'bottom':0.17, 'left':0.14, 'right':0.85,'hspace':0.0},
 						ax_destination=None,
 						n_index=None,
 						style='log',
-						clim='auto',
+						clim=None,
 						aspect='auto',
 						interpolation='none',
 						value_axis=-1,
 						sweepoverride=False,
 						cbar_orientation='vertical',
 						cbar_location ='normal',
-						**kwargs): #previously plot3dslices
+						**kwargs):
 		if not self.fig:
 			self.fig = plt.figure()
 		
@@ -199,200 +200,209 @@ class plotR:
 		self.fig.subplots_adjust(**subplots_args)
 
 
-		nplots = 1
+		n_subplots = 1
 		for i in self.uniques_per_col:
-			nplots *= len(i)
+			n_subplots *= len(i)
 
-		if n_index != None:
+		if n_index is not None:
 			n_index = np.array(n_index)
-			nplots = len(n_index)
+			n_subplots = len(n_index)
 			
-
+		if n_subplots > 1:
+			width = 2
+		else:
+			width = 1
+		n_valueaxes = len(self.get_valuekeys())
+		if n_valueaxes >1:
+			width = n_valueaxes
+			
+		gs = gridspec.GridSpec(int(n_subplots/width)+n_subplots%width, width)
+		
 		cnt=0
 		#enumerate over the generated list of unique values specified in the uniques columns
 		for j,ind in enumerate(buildLogicals(uniques_col)):
-			if n_index != None:
-				if j not in n_index:
-					continue
-			data_byuniques = filterdata.loc[ind]
-			data_slice = data_byuniques
-
-			#get the columns /not/ corresponding to uniques_cols
-			#find the coord_keys in the header
-			coord_keys = np.array([x['name'] for x in self.header if x['type']=='coordinate'])
-			
-			#filter out the keys corresponding to unique value columns
-			us=uniques_col_str		
-			coord_keys = [key for key in coord_keys if key not in uniques_col_str ]
-			#now find out if there are multiple value axes
-			value_keys = [i['name'] for i in self.header if i['type']=='value']
-			
-			x=data_slice.loc[:,coord_keys[-2]]
-			y=data_slice.loc[:,coord_keys[-1]]
-			z=data_slice.loc[:,value_keys[value_axis]] #only plot the last value in the values column for now
-			
-			xu = np.size(x.unique())
-			yu = np.size(y.unique())
-			
-
-			## if the measurement is not complete this will probably fail so trim of the final sweep?
-			print('xu: {:d}, yu: {:d}, lenz: {:d}'.format(xu,yu,len(z)))
-
-			if xu*yu != len(z):
-				xu = (len(z) / yu) #dividing integers so should automatically floor the value
-
-			#trim the first part of the sweep, for different min max, better to trim last part?
-			#or the first since there has been sorting
-			#this doesnt work for e.g. a hilbert measurement
-
-			print('xu: {:d}, yu: {:d}, lenz: {:d}'.format(xu,yu,len(z)))
-
-			#sorting sorts negative to positive, so beware:
-			#sweep direction determines which part of array should be cut off
-			if sweepoverride: ##if sweep True, override the detect value
-				z = z[-xu*yu:]
-				x = x[-xu*yu:]
-				y = y[-xu*yu:]
-			else:
-				z = z[:xu*yu]
-				x = x[:xu*yu]
-				y = y[:xu*yu]
-
-			XX = np.reshape(z,(xu,yu))
-
-			self.x = x
-			self.y = y
-			self.z = z
-			#now set the lims
-			xlims = (x.min(),x.max())
-			ylims = (y.min(),y.max())
-
-			#determine stepsize for di/dv, inprincipe only y step is used (ie. the diff is also taken in this direction and the measurement swept..)
-			xstep = (xlims[0] - xlims[1])/xu
-			ystep = (ylims[0] - ylims[1])/yu
-			ext = xlims+ylims
-			self.extent = ext
-			self.XX = XX
-			
-			self.exportData.append(XX)
-			try:
-				m={
-					'xu':xu,
-					'yu':yu,
-					'xlims':xlims,
-					'ylims':ylims,
-					'zlims':(0,0),
-					'xname':cols[-3],
-					'yname':cols[-2],
-					'zname':'unused',
-					'datasetname':self.name}
-				self.exportDataMeta = np.append(self.exportDataMeta,m)
-			except Exception,e:
-				print e
-				pass
-			if ax_destination is None:
-				ax = plt.subplot(nplots, 1, cnt+1)
-			else:
-				ax = ax_destination
-			cbar_title = ''
-			
-
-			
-			if type(style) != list:
-				style = list([style])
-
-
-			measAxisDesignation = parseUnitAndNameFromColumnName(value_keys[value_axis])
-			#wrap all needed arguments in a datastructure
-			cbar_quantity = measAxisDesignation[0]
-			cbar_unit = measAxisDesignation[1]
-			cbar_trans = [] #trascendental tracer :P For keeping track of logs and stuff
-
-			w = tstyle.getPopulatedWrap(style)
-			w2 = {'ext':ext, 'ystep':ystep,'XX': XX, 'cbar_quantity': cbar_quantity, 'cbar_unit': cbar_unit, 'cbar_trans':cbar_trans}
-			for k in w2:
-				w[k] = w2[k]
-			w['massage_func']=massage_func
-			tstyle.processStyle(style, w)
-
-			#unwrap
-			ext = w['ext']
-			XX = w['XX']
-			cbar_trans_formatted = ''.join([''.join(s+'(') for s in w['cbar_trans']])
-			cbar_title = cbar_trans_formatted + w['cbar_quantity'] + ' (' + w['cbar_unit'] + ')'
-			if len(w['cbar_trans']) is not 0:
-				cbar_title = cbar_title + ')'
-			
-			
-			#postrotate np.rot90
-			XX = np.rot90(XX)
-			
-			if 'deinterlace' in style:
-				self.fig = plt.figure()
-				ax_deinter_odd  = plt.subplot(2, 1, 1)
-				w['deinterXXodd'] = np.rot90(w['deinterXXodd'])
-				ax_deinter_odd.imshow(w['deinterXXodd'],extent=ext, cmap=plt.get_cmap(self.ccmap),aspect=aspect,interpolation=interpolation)
-				self.deinterXXodd_data = w['deinterXXodd']
+			#
+			for value_axis in range(n_valueaxes):
 				
-				ax_deinter_even = plt.subplot(2, 1, 2)
-				w['deinterXXeven'] = np.rot90(w['deinterXXeven'])
-				ax_deinter_even.imshow(w['deinterXXeven'],extent=ext, cmap=plt.get_cmap(self.ccmap),aspect=aspect,interpolation=interpolation)
-				self.deinterXXeven_data = w['deinterXXeven']
+				#plot only if number of the plot is indicated
+				if n_index is not None:
+					if j not in n_index:
+						continue
+				data_byuniques = filterdata.loc[ind]
+				data_slice = data_byuniques
 
-			else:
-# 				norm = mpl.colors.PowerNorm(gamma=.2)
-# 				norm.autoscale(self.XX)
-				self.im = ax.imshow(XX,extent=ext, cmap=plt.get_cmap(self.ccmap),aspect=aspect,interpolation=interpolation, norm=w['imshow_norm'])
+				#get the columns /not/ corresponding to uniques_cols
+				#find the coord_keys in the header
+				coord_keys = self.get_coordkeys()
+			
+				#filter out the keys corresponding to unique value columns
+				us=uniques_col_str		
+				coord_keys = [key for key in coord_keys if key not in uniques_col_str ]
+				#now find out if there are multiple value axes
+				value_keys = self.get_valuekeys()
+			
+				x=data_slice.loc[:,coord_keys[-2]]
+				y=data_slice.loc[:,coord_keys[-1]]
+				z=data_slice.loc[:,value_keys[value_axis]]
+			
+				xu = np.size(x.unique())
+				yu = np.size(y.unique())
+			
 
-				if  str(clim).lower() == 'auto': ## really not a good way i suppose, clim should be a tuple
-					self.im.set_clim(self.autoColorScale(XX.flatten()))
-				elif clim != (0,0):
-					self.im.set_clim(clim)
+				## if the measurement is not complete this will probably fail so trim of the final sweep?
+				print('xu: {:d}, yu: {:d}, lenz: {:d}'.format(xu,yu,len(z)))
+
+				if xu*yu != len(z):
+					xu = (len(z) / yu) #dividing integers so should automatically floor the value
+
+				#trim the first part of the sweep, for different min max, better to trim last part?
+				#or the first since there has been sorting
+				#this doesnt work for e.g. a hilbert measurement
+
+				print('xu: {:d}, yu: {:d}, lenz: {:d}'.format(xu,yu,len(z)))
+
+				#sorting sorts negative to positive, so beware:
+				#sweep direction determines which part of array should be cut off
+				if sweepoverride: ##if sweep True, override the detect value
+					z = z[-xu*yu:]
+					x = x[-xu*yu:]
+					y = y[-xu*yu:]
+				else:
+					z = z[:xu*yu]
+					x = x[:xu*yu]
+					y = y[:xu*yu]
+
+				XX = np.reshape(z,(xu,yu))
+
+				self.x = x
+				self.y = y
+				self.z = z
+				#now set the lims
+				xlims = (x.min(),x.max())
+				ylims = (y.min(),y.max())
+
+				#determine stepsize for di/dv, inprincipe only y step is used (ie. the diff is also taken in this direction and the measurement swept..)
+				xstep = (xlims[0] - xlims[1])/xu
+				ystep = (ylims[0] - ylims[1])/yu
+				ext = xlims+ylims
+				self.extent = ext
+				self.XX = XX
+			
+				self.exportData.append(XX)
+				try:
+					m={
+						'xu':xu,
+						'yu':yu,
+						'xlims':xlims,
+						'ylims':ylims,
+						'zlims':(0,0),
+						'xname':cols[-3],
+						'yname':cols[-2],
+						'zname':'unused',
+						'datasetname':self.name}
+					self.exportDataMeta = np.append(self.exportDataMeta,m)
+				except Exception,e:
+					print e
+					pass
+				if ax_destination is None:
+					ax = plt.subplot(gs[cnt])
+				else:
+					ax = ax_destination
+				cbar_title = ''
+			
+
+			
+				if type(style) != list:
+					style = list([style])
 
 
-			if 'flipaxes' in style:
-				ax.set_xlabel(coord_keys[-1])
-				ax.set_ylabel(coord_keys[-2])
-			else:
-				ax.set_xlabel(coord_keys[-2])
-				ax.set_ylabel(coord_keys[-1])
+				measAxisDesignation = parseUnitAndNameFromColumnName(value_keys[value_axis])
+				#wrap all needed arguments in a datastructure
+				cbar_quantity = measAxisDesignation[0]
+				cbar_unit = measAxisDesignation[1]
+				cbar_trans = [] #trascendental tracer :P For keeping track of logs and stuff
+
+				w = tstyle.getPopulatedWrap(style)
+				w2 = {'ext':ext, 'ystep':ystep,'XX': XX, 'cbar_quantity': cbar_quantity, 'cbar_unit': cbar_unit, 'cbar_trans':cbar_trans}
+				for k in w2:
+					w[k] = w2[k]
+				w['massage_func']=massage_func
+				tstyle.processStyle(style, w)
+
+				#unwrap
+				ext = w['ext']
+				XX = w['XX']
+				cbar_trans_formatted = ''.join([''.join(s+'(') for s in w['cbar_trans']])
+				cbar_title = cbar_trans_formatted + w['cbar_quantity'] + ' (' + w['cbar_unit'] + ')'
+				if len(w['cbar_trans']) is not 0:
+					cbar_title = cbar_title + ')'
+			
+			
+				#postrotate np.rot90
+				XX = np.rot90(XX)
+			
+				if 'deinterlace' in style:
+					self.fig = plt.figure()
+					ax_deinter_odd  = plt.subplot(2, 1, 1)
+					w['deinterXXodd'] = np.rot90(w['deinterXXodd'])
+					ax_deinter_odd.imshow(w['deinterXXodd'],extent=ext, cmap=plt.get_cmap(self.ccmap),aspect=aspect,interpolation=interpolation)
+					self.deinterXXodd_data = w['deinterXXodd']
+				
+					ax_deinter_even = plt.subplot(2, 1, 2)
+					w['deinterXXeven'] = np.rot90(w['deinterXXeven'])
+					ax_deinter_even.imshow(w['deinterXXeven'],extent=ext, cmap=plt.get_cmap(self.ccmap),aspect=aspect,interpolation=interpolation)
+					self.deinterXXeven_data = w['deinterXXeven']
+
+				else:
+	# 				norm = mpl.colors.PowerNorm(gamma=.2)
+	# 				norm.autoscale(self.XX)
+					self.im = ax.imshow(XX,extent=ext, cmap=plt.get_cmap(self.ccmap),aspect=aspect,interpolation=interpolation, norm=w['imshow_norm'],clim=clim)
+
+	# 				self.im.set_clim(self.autoColorScale(XX.flatten()))
+
+				if 'flipaxes' in style:
+					ax.set_xlabel(coord_keys[-1])
+					ax.set_ylabel(coord_keys[-2])
+				else:
+					ax.set_xlabel(coord_keys[-2])
+					ax.set_ylabel(coord_keys[-1])
 							
 
-			title = ''
-			for i in uniques_col_str:
-				title = '\n'.join([title, '{:s}: {:g} (mV)'.format(i,getattr(data_byuniques,i).iloc[0])])
-			print(title)
-			if 'notitle' not in style:
-				ax.set_title(title)
-			# create an axes on the right side of ax. The width of cax will be 5%
-			# of ax and the padding between cax and ax will be fixed at 0.05 inch.
-			if drawCbar:
-				from mpl_toolkits.axes_grid.inset_locator import inset_axes
-				if cbar_location == 'inset':
-					if cbar_orientation == 'horizontal':
-						cax = inset_axes(ax,width='30%',height='10%',loc=2,borderpad=1)
-					else: 
-						cax = inset_axes(ax,width='30%',height='10%',loc=1)						
-				else:
-					divider = make_axes_locatable(ax)
-					if cbar_orientation == 'horizontal':
-						cax = divider.append_axes("top", size="10%", pad=0.05)
+				title = ''
+				for i in uniques_col_str:
+					title = '\n'.join([title, '{:s}: {:g} (mV)'.format(i,getattr(data_byuniques,i).iloc[0])])
+				print(title)
+				if 'notitle' not in style:
+					ax.set_title(title)
+				# create an axes on the right side of ax. The width of cax will be 5%
+				# of ax and the padding between cax and ax will be fixed at 0.05 inch.
+				if drawCbar:
+					from mpl_toolkits.axes_grid.inset_locator import inset_axes
+					if cbar_location == 'inset':
+						if cbar_orientation == 'horizontal':
+							cax = inset_axes(ax,width='30%',height='10%',loc=2,borderpad=1)
+						else: 
+							cax = inset_axes(ax,width='30%',height='10%',loc=1)						
 					else:
-						cax = divider.append_axes("right", size="2.5%", pad=0.05)
-					pos = list(ax.get_position().bounds)
-				if hasattr(self, 'im'):
-					self.cbar = plt.colorbar(self.im, cax=cax,orientation=cbar_orientation)
-					cbar = self.cbar
+						divider = make_axes_locatable(ax)
+						if cbar_orientation == 'horizontal':
+							cax = divider.append_axes("top", size="10%", pad=0.05)
+						else:
+							cax = divider.append_axes("right", size="2.5%", pad=0.05)
+						pos = list(ax.get_position().bounds)
+					if hasattr(self, 'im'):
+						self.cbar = plt.colorbar(self.im, cax=cax,orientation=cbar_orientation)
+						cbar = self.cbar
 					
-					if cbar_orientation == 'horizontal':
-						cbar.set_label(cbar_title,labelpad=-20, x=1.35)
-# 						cbar.ax.xaxis.set_label_position('top')
-# 						cbar.ax.yaxis.set_label_position('left')
-					else:
-						cbar.set_label(cbar_title)#,labelpad=-19, x=1.32)
-			cnt+=1 #counter for subplots
+						if cbar_orientation == 'horizontal':
+							cbar.set_label(cbar_title,labelpad=-20, x=1.35)
+	# 						cbar.ax.xaxis.set_label_position('top')
+	# 						cbar.ax.yaxis.set_label_position('left')
+						else:
+							cbar.set_label(cbar_title)#,labelpad=-19, x=1.32)
+				cnt+=1 #counter for subplots
 
-		if fiddle: self.toggleFiddle()
+		self.toggleFiddle()
 		self.toggleLinedraw()
 		self.toggleLinecut()
 		return self.fig
@@ -400,7 +410,6 @@ class plotR:
 	def plot2d(self,fiddle=False,n_index=None,value_axis = -1,style=['normal'],**kwargs): #previously scanplot
 		# scanplot(file,fig=None,n_index=None,style=[],data=None,**kwargs):
 		# kwargs go into matplotlib/pyplot plot command
-		# fiddle for compatibility with tessierView only
 		
 		if not self.fig:
 			self.fig = plt.figure()
@@ -411,8 +420,8 @@ class plotR:
 		uniques_col = []
 	
 		
-		coord_keys = [i['name'] for i in self.header if i['type']=='coordinate' ]
-		value_keys = [i['name'] for i in self.header if i['type']=='value' ]
+		coord_keys = self.get_coordkeys()
+		value_keys = self.get_valuekeys()
 		#assume 2d plots with data in the two last columns
 		uniques_col_str = coord_keys[:-1]
 		
@@ -427,12 +436,12 @@ class plotR:
 			col = getattr(self.data,i)
 			uniques_col.append(col)
 
-		if n_index != None:
+		if n_index is not None:
 			n_index = np.array(n_index)
-			nplots = len(n_index)
+			n_subplots = len(n_index)
 		
 		for i,j in enumerate(buildLogicals(uniques_col)):
-			if n_index != None:
+			if n_index is not None:
 					if i not in n_index:
 						continue
 			filtereddata = self.data.loc[j]
@@ -478,7 +487,7 @@ class plotR:
 		
 		coordkeys_notempty=[k for k in coordkeys if len(data[k].unique()) > 1]
 		n_subplots = len(coordkeys_notempty)
-		width =2
+		width = 2
 		import matplotlib.gridspec as gridspec
 		gs = gridspec.GridSpec(int(n_subplots/width)+n_subplots%width, width)
 

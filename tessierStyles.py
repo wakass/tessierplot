@@ -198,7 +198,7 @@ def helper_deint_cross(w):
 
 def helper_massage(w):
 	func = w['massage_func']
-	w['XX'] = func(w['XX'])
+	w['XX'] = func(w)['XX']
 
 
 STYLE_FUNCS = {
@@ -218,6 +218,7 @@ STYLE_FUNCS = {
 	'fancylog': helper_fancylog,
 	'minsubtract': helper_minsubtract,
 	'crosscorr':helper_crosscorr,
+# 	'threshold_offset': helper_threshold_offset,
 	'massage': helper_massage,
 	'deint_cross': helper_deint_cross
 }
@@ -240,6 +241,7 @@ STYLE_SPECS = {
 	'flipaxes': {'param_order': []},
 	'flipyaxis': {'param_order': []},
 	'flipxaxis': {'param_order': []},
+# 	'threshold_offset': {'threshold':0.2,'start':0.0,'stop':1.0,'param_order':[]},
 	'mov_avg': {'m': 1, 'n': 5, 'win': None, 'param_order': ['m', 'n', 'win']},
 	'abs': {'param_order': []},
 	'savgol': {'samples': 11, 'order': 3, 'param_order': ['samples', 'order']},
