@@ -137,33 +137,25 @@ class plotR:
 
 		coords = np.array([x['name'] for x in self.header if x['type']=='coordinate'])
 		
-		if len(coords[filter_neg]) > 1: 
-			return False
-		else:
-			return True
+		return len(coords[filter_neg]) < 2
 	
 	def quickplot(self,**kwargs):
 		nDim = self.ndim
-		#if the uniqueness of a dimension is less than x, plot in sequential 2d, otherwise 3d
 
-		#maybe put logic here to plot some uniques as well from nonsequential axes?
-		#on the other hand, logic is for silly people
 		filter = self.dims < 5
-		filter_neg = np.array([not x for x in filter])
 
 		coords = np.array([x['name'] for x in self.header if x['type']=='coordinate'])
 		
 		uniques_col_str = coords[filter]
 		print uniques_col_str
 
-		if len(coords[filter_neg]) > 1: 
-			
-			fig = self.plot3d(uniques_col_str=uniques_col_str,**kwargs)
-			self.exportToMtx() #do this
-			return fig 
+		if self.is2d(): 
+			fig = self.plot2d(**kwargs)
 		else:
-			fig = self.plot2d(**kwargs)		
-			return fig
+			fig = self.plot3d(uniques_col_str=uniques_col_str,**kwargs)
+			self.exportToMtx() #do thi
+		
+		return fig
 
 	def autoColorScale(self,data):
 		values, edges = np.histogram(data, 256)

@@ -109,12 +109,7 @@ class tessierView(object):
                     else :
                         guessStyle = p.guessStyle()
                     p.quickplot(style=guessStyle + style)
-                    #measname = thumbfile.rsplit('\\',1)
-                    #measname = measname[1].rsplit('_',1)
-                    #measname = measname[0].split('_',1)
-                    #measname = measname[1]
-                    #print measname
-                    #p.fig.suptitle(measname, fontsize=12)
+
                     p.fig.savefig(thumbfile,bbox_inches='tight' )
                     p.fig.savefig(thumbfile_datadir,bbox_inches='tight' )
                     plt.close(p.fig)
@@ -158,13 +153,16 @@ class tessierView(object):
                     matches.append(fullpath)
             #found at least one file that matches the filemask
             if matches: 
-                fullpath = matches[0]
-                measname = matches[0].rsplit('.',1)
-                measname = measname[0].rsplit('\\',1)
-                measname = measname[1]
+                fullpath = matches[0]                
+                dir,basename =  os.path.split(fullpath)
                 
-                datedir = matches[0].rsplit('\\',3)
-                datedir = datedir[1]
+                measname,ext1 = os.path.splitext(basename)
+                #dirty, if filename ends e.g. in gz, also chops off the second extension
+                measname,ext2 = os.path.splitext(measname)
+                ext = ext2+ext1
+                
+                #extract the directory which is the date of measurement
+                datedir = os.path.basename(os.path.normpath(dir+'/../'))
                 
 
                 if filterstring in open(self.getsetfilepath(fullpath)).read():   #liable for improvement
@@ -197,7 +195,7 @@ class tessierView(object):
         # print all_relative
         out=u"""
 
-        <style>.container { width:75% !important; }</style>
+        
         <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
         <meta http-equiv="Pragma" content="no-cache"> 
         <meta http-equiv="Expires" content="0">
@@ -209,7 +207,7 @@ class tessierView(object):
     {% if lastdatedir != item.datedir %}
         </div>
         <div class='datedirrow'>
-        <p><b><font size = '5'>{{ item.datedir }}</font></b></p>
+        <p>{{ item.datedir }}</p>
         </div>
         {% set columncount = 0 %}
     {% endif %}
@@ -227,7 +225,7 @@ class tessierView(object):
                 {% if loop.index == items|length %}
                 <a name="#endofpage"></a>
                 {% endif %}
-                <p><b><font size = '2'>{{ item.measname }}</font></b></p>
+                <p>{{ item.measname }}</p>
                 <img  class="ui-resizable" src="{{ item.thumbpath }}"/> 
                 <div class="ui-resizable-handle ui-resizable-e" style="z-index: 90; display: none;"></div>
                 <div class="ui-resizable-handle ui-resizable-s" style="z-index: 90; display: none;"></div>  
@@ -352,6 +350,7 @@ class tessierView(object):
         </script>
         
         <style type="text/css">
+/*         .container { width:100% !important; } */
         @media (min-width: 5em) {
             .row { width: auto; display: table; table-layout: fixed; padding-top: 1em;}
             .col { display: table-cell;  width: auto;  word-break:break-all; padding-right: 1em;}
