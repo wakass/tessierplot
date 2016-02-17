@@ -144,7 +144,7 @@ class plotR:
 
 		filter = self.dims < 5
 
-		coords = np.array([x['name'] for x in self.header if x['type']=='coordinate'])
+		coords = self.get_coordkeys()
 		
 		uniques_col_str = coords[filter]
 		print uniques_col_str
@@ -524,7 +524,7 @@ class plotR:
  			style.extend(['mov_avg(m=1,n=10)','didv','mov_avg(m=1,n=5)','abs'])
 			
 		#default style is 'log'
-		style.append = ['log']
+		style.append('log')
 
 		return style
 		
