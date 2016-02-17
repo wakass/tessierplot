@@ -127,7 +127,7 @@ class plotR:
 		self.bControls = True #boolean controlling state of plot manipulation buttons
 		
 
-	def quickplot(self,**kwargs):
+	def is2d(self,**kwargs):
 		nDim = self.ndim
 		#if the uniques of a dimension is less than x, plot in sequential 2d, otherwise 3d
 
@@ -137,17 +137,25 @@ class plotR:
 
 		coords = np.array([x['name'] for x in self.header if x['type']=='coordinate'])
 		
+		return len(coords[filter_neg]) < 2
+	
+	def quickplot(self,**kwargs):
+		nDim = self.ndim
+
+		filter = self.dims < 5
+
+		coords = np.array([x['name'] for x in self.header if x['type']=='coordinate'])
+		
 		uniques_col_str = coords[filter]
 		print uniques_col_str
 
-		if len(coords[filter_neg]) > 1: 
-			
-			fig = self.plot3d(uniques_col_str=uniques_col_str,**kwargs)
-			self.exportToMtx() #do this
-			return fig 
+		if self.is2d(): 
+			fig = self.plot2d(**kwargs)
 		else:
-			fig = self.plot2d(**kwargs)		
-			return fig
+			fig = self.plot3d(uniques_col_str=uniques_col_str,**kwargs)
+			self.exportToMtx() #do thi
+		
+		return fig
 
 	def autoColorScale(self,data):
 		values, edges = np.histogram(data, 256)
@@ -514,10 +522,10 @@ class plotR:
 		y=self.filterdata.iloc[:,-2]
  		if (max(y) == -1*min(y) and max(y) <= 150):
  			style.extend(['mov_avg(m=1,n=10)','didv','mov_avg(m=1,n=5)','abs'])
-# 			style.insert(0,'sgdidv')
 			
 		#default style is 'log'
-		style.append('log')
+		style.append = ['log']
+
 		return style
 		
 	def sortdata(self,refresh=False):
