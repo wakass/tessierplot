@@ -169,11 +169,12 @@ class tessierView(object):
                 #check for certain parameters with filterstring in the set file: e.g. 'dac4: 1337.0'
                     thumbpath = self.makethumbnail(fullpath,**kwargs)
                     if thumbpath:
-                        #print dirnames
-                        self._allthumbs.append({'datapath':fullpath,'thumbpath':thumbpath, 'datedir':datedir, 'measname':measname})
+                        self._allthumbs.append({'datapath':fullpath,
+                                             'thumbpath':thumbpath,
+                                             'datedir':datedir, 
+                                             'measname':measname})
                         images += 1
-                            
-        #print ding
+
         return self._allthumbs
     def _ipython_display_(self):
         display_html(HTML(self.genhtml(refresh=False)))
@@ -188,11 +189,12 @@ class tessierView(object):
         self.walk(self._filemask,'dac',override=refresh) #Change override to True if you want forced refresh of thumbs
         #unobfuscate the file relative to the working directory
         #since files are served from ipyhton notebook from ./files/
-        all_relative = [{ 'thumbpath':'./files/'+os.path.relpath(k['thumbpath'],start=os.getcwd()),'datapath':k['datapath'], 'datedir':k['datedir'], 'measname':k['measname'] } for k in self._allthumbs]
-        #HTML("<style>.container { width:100% !important; }</style>")
-        #print thumbpath
-        #print self._allthumbs
-        # print all_relative
+        all_relative = [{ 
+                            'thumbpath':'./files/'+os.path.relpath(k['thumbpath'],start=os.getcwd()),
+                            'datapath':k['datapath'], 
+                            'datedir':k['datedir'], 
+                            'measname':k['measname'] } for k in self._allthumbs]
+
         out=u"""
 
         
@@ -200,70 +202,66 @@ class tessierView(object):
         <meta http-equiv="Pragma" content="no-cache"> 
         <meta http-equiv="Expires" content="0">
         
-        <div>
+        <div id='outer'>
     
-    {% set columncount = 0 %}
+    {% set columncount = 1 %}
+    {% set lastdate = '' %}
     {% for item in items %}
-    {% if lastdatedir != item.datedir %}
-        </div>
-        <div class='datedirrow'>
-        <p>{{ item.datedir }}</p>
-        </div>
-        {% set columncount = 0 %}
-    {% endif %}
-    {% set columncount = columncount + 1 %}
-    {% if columncount % 3 == 1 %}
-        <div class='row'>
-    {% endif %}
-    {% set lastdatedir = item.datedir %}
-        <div class='col'>
-<!-- 
-        <div class="output_area">
-            <div class="output_subarea output_png output_result">
- -->
-     <div class='thumb'>
-                {% if loop.index == items|length %}
-                <a name="#endofpage"></a>
-                {% endif %}
-                <p>{{ item.measname }}</p>
-                <img  class="ui-resizable" src="{{ item.thumbpath }}"/> 
-                <div class="ui-resizable-handle ui-resizable-e" style="z-index: 90; display: none;"></div>
-                <div class="ui-resizable-handle ui-resizable-s" style="z-index: 90; display: none;"></div>  
-                <div class="ui-resizable-handle ui-resizable-se ui-icon ui-icon-gripsmall-diagonal-se" style="z-index: 90; display: none;"></div>
-     </div>
-<!-- 
-</div>
-</div>
- -->
-            <div class='controls'>
     
-            <button id='{{ item.datapath }}' onClick='toclipboard(this.id)'>Filename to clipboard</button>
-            <br/>
-            <button id='{{ item.datapath }}' onClick='refresh(this.id)'>Refresh</button>
+        {% set isnewdate = (lastdate != item.datedir) %}
+        {% if isnewdate %}
+            {% set columncount = 1 %}
+            {% if loop.index != 1 %}
+                </div> {# close previous row, but make sure no outer div is closed #}
+            {% endif %}
+            <div class='datesep'> {{item.datedir}} </div>                
+        {% endif %}
+        
+        {% if (columncount % 3 == 1) %}
+            <div class='row'>
+        {% endif %}
 
-            <br/>
-            <button id='{{ item.datapath }}' onClick='plotwithStyle(this.id)' class='plotStyleSelect'>Plot with</button>
-            <form name='{{ item.datapath }}'>
-            <select name="selector">
-                <option value="{{"[\\'\\']"|e}}">normal</option>
-                <option value="{{"[\\'abs\\']"|e}}">abs</option>
-                <option value="{{"[\\'log\\']"|e}}">log</option>
-                <option value="{{"[\\'savgol\\',\\'log\\']"|e}}">savgol,log</option>
-                <option value="{{"[\\'sgdidv\\']"|e}}">sgdidv</option>
-                <option value="{{" [\\'sgdidv\\',\\'log\\']"|e}} ">sgdidv,log</option>
-                <option value="{{" [\\'mov_avg(m=1,n=15)\\',\\'didv\\',\\'mov_avg(m=1,n=15)\\',\\'abs\\',\\'log\\' ]"|e}} ">Ultrasmooth didv</option>
-                <option value="{{" [\\'mov_avg\\',\\'didv\\',\\'abs\\']"|e}} ">mov_avg,didv,abs</option>
-                <option value="{{" [\\'mov_avg\\',\\'didv\\',\\'abs\\',\\'log\\']"|e}} ">mov_avg,didv,abs,log</option>
-                <option value="{{" [\\'deinterlace0\\',\\'log\\']"|e}} ">deinterlace</option>
-                <option value="{{" [\\'crosscorr\\']"|e}} ">Crosscorr</option>
-            </select>
-            
-            </form>            
+            <div class='col'>
+
+                <div class='name'> {{ item.measname }} </div>
+
+                <div class='thumb'>
+                        {% if loop.index == items|length %}
+                        <a name="#endofpage"></a>
+                        {% endif %}
+                        <img src="{{ item.thumbpath }}"/> 
+                </div>
+
+                <div class='controls'>
+                    <button id='{{ item.datapath }}' onClick='toclipboard(this.id)'>Filename to clipboard</button>
+                    <br/>
+                    <button id='{{ item.datapath }}' onClick='refresh(this.id)'>Refresh</button>
+                    <br/>
+                    <button id='{{ item.datapath }}' onClick='plotwithStyle(this.id)' class='plotStyleSelect'>Plot with</button>
+                    <form name='{{ item.datapath }}'>
+                    <select name="selector">
+                        <option value="{{"[\\'\\']"|e}}">normal</option>
+                        <option value="{{"[\\'abs\\']"|e}}">abs</option>
+                        <option value="{{"[\\'log\\']"|e}}">log</option>
+                        <option value="{{"[\\'savgol\\',\\'log\\']"|e}}">savgol,log</option>
+                        <option value="{{"[\\'sgdidv\\']"|e}}">sgdidv</option>
+                        <option value="{{" [\\'sgdidv\\',\\'log\\']"|e}} ">sgdidv,log</option>
+                        <option value="{{" [\\'mov_avg(m=1,n=15)\\',\\'didv\\',\\'mov_avg(m=1,n=15)\\',\\'abs\\',\\'log\\' ]"|e}} ">Ultrasmooth didv</option>
+                        <option value="{{" [\\'mov_avg\\',\\'didv\\',\\'abs\\']"|e}} ">mov_avg,didv,abs</option>
+                        <option value="{{" [\\'mov_avg\\',\\'didv\\',\\'abs\\',\\'log\\']"|e}} ">mov_avg,didv,abs,log</option>
+                        <option value="{{" [\\'deinterlace0\\',\\'log\\']"|e}} ">deinterlace</option>
+                        <option value="{{" [\\'crosscorr\\']"|e}} ">Crosscorr</option>
+                    </select>
+
+                    </form>            
+                </div>
             </div>
-        </div>
-    {% if columncount % 3 == 0 %}
-        </div>
-    {% endif %}
+        {% if (columncount % 3 == 0) %}
+            </div>
+        {% endif %}
+
+        {% set lastdate = item.datedir %}
+        {% set columncount = columncount + 1 %}
     {% endfor %}    
     </div>
     
@@ -351,11 +349,43 @@ class tessierView(object):
         
         <style type="text/css">
 /*         .container { width:100% !important; } */
-        @media (min-width: 5em) {
-            .row { width: auto; display: table; table-layout: fixed; padding-top: 1em;}
-            .col { display: table-cell;  width: auto;  word-break:break-all; padding-right: 1em;}
-            .datedirrow { width: 100%; display: table; table-layout: fixed; border-bottom: 2pt solid black; line-height: 100%; padding-top: 2em;}
+        @media (min-width: 30em) {
+            .row {  width: auto; 
+                    display: table; 
+                    table-layout: fixed; 
+                    padding-top: 1em; 
+                    }
+            .col { display: table-cell;  
+                    padding-right: 1em;                
+                    position:relative;
+                    }
         }
+        .col .name { z-index:5;
+                    font-size: 10pt; 
+                    color:black; 
+                    position:absolute; 
+                    top: 2px; 
+                    width:80% ;
+                    border: solid black 1px;
+                    background-color: white;
+                    word-break:break-all; 
+                    opacity:0;
+                    -moz-transition: all .2s;
+                    -webkit-transition: all .2s;
+                    transition: all .2s;
+                    }
+        .col:hover .name {
+                    opacity:1;
+                }            
+        
+        .datesep { width:100%; 
+                   height: auto; 
+                   border-bottom: 2pt solid black; 
+                   font-size:14pt;
+                   font-weight:bold;
+                   font-style: italic;
+                   padding-top: 2em;}
+        #outer {}
         img{
             width:100%;
             height:auto;

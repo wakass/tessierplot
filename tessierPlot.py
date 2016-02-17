@@ -522,12 +522,10 @@ class plotR:
 		y=self.filterdata.iloc[:,-2]
  		if (max(y) == -1*min(y) and max(y) <= 150):
  			style.extend(['mov_avg(m=1,n=10)','didv','mov_avg(m=1,n=5)','abs'])
- 			#style.insert(0,'log')
 			
 		#default style is 'log'
-		else:
-			style = ['log']
-		print style
+		style.append = ['log']
+
 		return style
 		
 	def sortdata(self,refresh=False):
