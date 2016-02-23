@@ -477,10 +477,10 @@ class plotR:
 		return self.fig
 		
 	def get_coordkeys(self):
-		coord_keys = [i['name'] for i in self.header if i['type']=='coordinate' ]
+		coord_keys = np.array([i['name'] for i in self.header if i['type']=='coordinate' ])
 		return coord_keys
 	def get_valuekeys(self):
-		value_keys = [i['name'] for i in self.header if i['type']=='value' ]
+		value_keys = np.array([i['name'] for i in self.header if i['type']=='value' ])
 		return value_keys
 	def starplot(self,style=[]):
 		if not self.fig:
