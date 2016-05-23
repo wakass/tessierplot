@@ -223,7 +223,7 @@ class plotR:
 		n_valueaxes = len(self.get_valuekeys())
 		if n_valueaxes >1:
 			width = n_valueaxes
-			
+                        n_subplots = n_subplots * n_valueaxes	
 		gs = gridspec.GridSpec(int(n_subplots/width)+n_subplots%width, width)
 		
 		cnt=0

@@ -143,6 +143,7 @@ class tessierView(object):
         self.allthumbs = []
         reg = re.compile(self._filemask) #get only files determined by filemask
         for root,dirnames,filenames in chain.from_iterable(os.walk(path) for path in paths):
+            dirnames.sort(reverse=True)
             matches = []
             #in the current directory find all files matching the filemask
             for filename in filenames:
@@ -178,9 +179,6 @@ class tessierView(object):
         return self._allthumbs
     def _ipython_display_(self):
         display_html(HTML(self.genhtml(refresh=False)))
-        from IPython.display import Javascript,display_javascript
-        a = Javascript('jump(\'#endofpage\')')
-        display_javascript(a)
     
     def htmlout(self,refresh=False):
         display(HTML(self.genhtml(refresh=refresh)))
@@ -226,9 +224,6 @@ class tessierView(object):
                 <div class='name'> {{ item.measname }} </div>
 
                 <div class='thumb'>
-                        {% if loop.index == items|length %}
-                        <a name="#endofpage"></a>
-                        {% endif %}
                         <img src="{{ item.thumbpath }}"/> 
                 </div>
 
