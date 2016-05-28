@@ -23,9 +23,9 @@ class toggleButton(QtGui.QToolButton):
         
     def updateIcon(self):
         if self.state == 0:
-            icon = QtGui.QIcon('./{:s}_off.png'.format(self.name))
+            icon = QtGui.QIcon('assets/{:s}_off.png'.format(self.name))
         elif self.state == 1:
-            icon = QtGui.QIcon('./{:s}_on.png'.format(self.name))
+            icon = QtGui.QIcon('assets/{:s}_on.png'.format(self.name))
         self.setIcon(icon)
         self.setIconSize(QtCore.QSize(32, 32))
         self.update()
