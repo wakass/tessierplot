@@ -15,7 +15,7 @@ class parser(object):
 class dat_parser(parser):
     def __init__(self,filename):
         self._file = filename
-        super(parser,self).__init__()
+        super(dat_parser,self).__init__()
         
     def parse(self,filebuffer=None):
         if filebuffer == None:
@@ -83,8 +83,8 @@ class dat_parser(parser):
     
 class gz_parser(dat_parser):
     def __init__(self,file):
-        self._file = file
         super(gz_parser,self).__init__(file)
+        self._file = file
 
     def parse(self):
         import gzip

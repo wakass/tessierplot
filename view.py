@@ -1,7 +1,7 @@
 #tessierMagic, where the real % happens
 #tessierView for couch potato convenience...
 
-import tessierPlot as ts
+import plot as ts
 import jinja2 as jj
 import matplotlib.pyplot as plt
 import pylab
@@ -78,6 +78,15 @@ class tessierView(object):
         self._filemask = filemask
         self._filterstring = filterstring
         self._allthumbs = []
+        
+        #check for and create thumbnail dir
+        thumbnaildir = os.path.dirname(getthumbcachepath('./'))
+        if not os.path.exists(thumbnaildir):
+            try:
+                os.mkdir(thumbnaildir)
+            except:
+                raise Exception('Couldn\'t create thumbnail directory')
+        
     def on(self):   
         print 'You are now watching through the glasses of ideology'
         display(VimeoVideo('106036638'))

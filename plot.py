@@ -127,18 +127,18 @@ class plotR(object):
 						cbar_location ='normal',
 						**kwargs):
                 #some housekeeping
-                if not self.fig:
+		if not self.fig:
 			self.fig = plt.figure()
 		self.fig.subplots_adjust(**subplots_args)
-                self.ccmap = loadCustomColormap()
+		self.ccmap = loadCustomColormap()
                 
-	        #determine how many subplots we need
+		#determine how many subplots we need
 		n_subplots = 1
 
-                #make a list of uniques per column associated with column name
-                uniques_by_column = dict(zip(self.data.coordkeys + self.data.valuekeys, self.data.dims))
+        #make a list of uniques per column associated with column name
+		uniques_by_column = dict(zip(self.data.coordkeys + self.data.valuekeys, self.data.dims))
 
-                #by this array  
+		#by this array  
 		for i in uniques_col_str:
 			n_subplots *= uniques_by_column[i]
 
@@ -152,7 +152,7 @@ class plotR(object):
 			width = 1
 		n_valueaxes = len(self.data.valuekeys)
 		width = n_valueaxes
-                n_subplots = n_subplots * n_valueaxes	
+		n_subplots = n_subplots * n_valueaxes	
 		gs = gridspec.GridSpec(int(n_subplots/width)+n_subplots%width, width)
 		
 		cnt=0 #subplot counter
@@ -354,7 +354,7 @@ class plotR(object):
 		for a in uniques_col_str:
 			uniques_axis_designations.append(parseUnitAndNameFromColumnName(a))
 				
-                uniques_col = self.data[uniques_col_str]
+		uniques_col = self.data[uniques_col_str]
 		if n_index is not None:
 			n_index = np.array(n_index)
 			n_subplots = len(n_index)
@@ -422,7 +422,7 @@ class plotR(object):
 		#	if y[yu-1]==y[yu]: style.append('deinterlace0')
 
 		#autodidv function
-		y=self.filterdata.iloc[:,-2]
+		y=self.data.sorted_data.iloc[:,-2]
  		if (max(y) == -1*min(y) and max(y) <= 150):
  			style.extend(['mov_avg(m=1,n=10)','didv','mov_avg(m=1,n=5)','abs'])
 			
