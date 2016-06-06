@@ -11,12 +11,12 @@ class parser(object):
         return self._data
     def parseheader(self):
         pass
-    
+
 class dat_parser(parser):
     def __init__(self,filename):
         self._file = filename
         super(dat_parser,self).__init__()
-        
+
     def parse(self,filebuffer=None):
         if filebuffer == None:
             f = open(self._file)
@@ -30,13 +30,13 @@ class dat_parser(parser):
                                  skiprows=self._headerlength,
                                  names=[i['name'] for i in self._header])
         return super(dat_parser,self).parse()
-        
+
     def is_valid(self):
         pass
     def parseheader(self,filebuffer):
 
         for i, line in enumerate(filebuffer):
-	    if i < 3:
+            if i < 3:
                 continue
             if i > 5:
                 if line[0] != '#': #find the skiprows accounting for the first linebreak in the header
@@ -47,7 +47,7 @@ class dat_parser(parser):
         filebuffer.seek(0)
         headertext = [next(filebuffer) for x in xrange(headerlength)]
         headertext= ''.join(headertext)
-	filebuffer.seek(0) #put it back to 0 in case someone else naively reads the filebuffer            
+        filebuffer.seek(0) #put it back to 0 in case someone else naively reads the filebuffer
         #doregex
         coord_expression = re.compile(r"""                  ^\#\s*Column\s(.*?)\:
                                                             [\r\n]{0,2}
@@ -59,7 +59,7 @@ class dat_parser(parser):
                                                             [\r\n]{0,2}
                                                             \#\s*start\:\s(.*?)
                                                             [\r\n]{0,2}
-                                                            \#\s*type\:\s(.*?)[\r\n]{0,2}$ 
+                                                            \#\s*type\:\s(.*?)[\r\n]{0,2}$
 
                                                             """#annoying \r's...
                                         ,re.VERBOSE |re.MULTILINE)
@@ -71,16 +71,16 @@ class dat_parser(parser):
                                                                 \#\s*type\:\s(.*?)[\r\n]{0,2}$
                                                                 """
                                             ,re.VERBOSE |re.MULTILINE)
-        coord=  coord_expression.findall(headertext) 
+        coord=  coord_expression.findall(headertext)
         val  = val_expression.findall(headertext)
         coord = [ zip(('column','end','name','size','start','type'),x) for x in coord]
         coord = [dict(x) for x in coord]
         val = [ zip(('column','name','type'),x) for x in val]
         val = [dict(x) for x in val]
-        
+
         header=coord+val
         return header,headerlength
-    
+
 class gz_parser(dat_parser):
     def __init__(self,file):
         super(gz_parser,self).__init__(file)
@@ -94,26 +94,26 @@ class gz_parser(dat_parser):
             return super(gz_parser,self).parse(filebuffer=gzip.GzipFile(fileobj=f))
         else:
             raise Exception('Not a valid gzip file')
-        
+
 class Data(pandas.DataFrame):
     #supported filetypes
     _FILETYPES =   {
         '.dat': dat_parser,
         '.dat.gz': gz_parser
         }
-    
+
     def __init__(self,*args,**kwargs):
         #args: filepath, sort
         #filepath = kwargs.pop('filepath',None)
         #sort = kwargs.pop('sort',True)
-        
+
         #dat,header = self.load_file(filepath)
         super(Data,self).__init__(*args,**kwargs)
 
         self._filepath = None #filepath
         self._header = None #header
         self._sorted_data = None
-        
+
     @property
     def _constructor(self):
         return Data
@@ -143,21 +143,22 @@ class Data(pandas.DataFrame):
         newdataframe = Data(dat)
         newdataframe._header = header
         return newdataframe
-    
+
     @property
     def coordkeys(self):
         coord_keys = [i['name'] for i in self._header if i['type']=='coordinate' ]
         return coord_keys
-    @property 
+    @property
     def valuekeys(self):
-	value_keys = [i['name'] for i in self._header if i['type']=='value' ]
-	return value_keys
+        value_keys = [i['name'] for i in self._header if i['type']=='value' ]
+        return value_keys
+
     @property
     def sorted_data(self):
         if self._sorted_data is None:
             #sort the data from the last coordinate column backwards
             self._sorted_data = self.sort_values(by=self.coordkeys)
-            self._sorted_data = self.dropna(how='any')
+            self._sorted_data = self._sorted_data.dropna(how='any')
         return self._sorted_data
 
     @property
@@ -173,18 +174,18 @@ class Data(pandas.DataFrame):
         dims = np.array([],dtype='int')
         #first determine the columns belong to the axes (not measure) coordinates
         cols = [i for i in self._header if (i['type'] == 'coordinate')]
-        
+
         for i in cols:
             col = getattr(self.sorted_data,i['name'])
             dims = np.hstack( ( dims ,len(col.unique())  ) )
         return dims
-    
+
     def make_filter_from_uniques_in_columns(self,columns):
     #generator to make a filter which creates measurement 'sets'
-        import math    
-#arg columns, list of column names which contain the 'uniques' that define a measurement set
+        import math
+    #arg columns, list of column names which contain the 'uniques' that define a measurement set
 
-#combine the logical uniques of each column into boolean index over those columns
+    #combine the logical uniques of each column into boolean index over those columns
     #infers that each column has
     #like
     # 1, 3
@@ -197,26 +198,16 @@ class Data(pandas.DataFrame):
     #go through list and recursively combine all unique values
         xs = self[columns]
         if xs.shape[1] > 1:
-	    for i in xs.iloc[:,0].unique():
-	        if math.isnan(i):
-		    continue
-	        for j in self.make_filter_from_uniques_in_columns(columns[1:]):
-		    yield (xs.iloc[:,0] == i) & j ## boolean and
+            for i in xs.iloc[:,0].unique():
+                if math.isnan(i):
+                    continue
+                for j in self.make_filter_from_uniques_in_columns(columns[1:]):
+                    yield (xs.iloc[:,0] == i) & j ## boolean and
         elif xs.shape[1] == 1:
-	    for i in xs.iloc[:,0].unique():
-	        if (math.isnan(i)):
-		    continue
-	        yield xs.iloc[:,0] == i
+            for i in xs.iloc[:,0].unique():
+                if (math.isnan(i)):
+                    continue
+                yield xs.iloc[:,0] == i
         else:
-	    #empty list
-	    yield slice(None) #return a 'semicolon' to select all the values when there's no value to filter on
-
-class Ex(pandas.DataFrame):
-    def __init__(self,*args,**kwargs):
-        super(Ex,self).__init__(*args,**kwargs)
-        import ipdb
-        ipdb.set_trace()
-        self.update([1,2,3,4,5])
-    @property
-    def _constructor(self):
-        return Ex
+            #empty list
+            yield slice(None) #return a 'semicolon' to select all the values when there's no value to filter on

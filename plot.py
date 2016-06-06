@@ -22,19 +22,15 @@ _moduledir = os.path.dirname(os.path.realpath(__file__))
 from gui import *
 import styles
 from data import Data
+import helpers
 
-#set the asset directory
-import pkg_resources, os
-resource_package = __name__  
-resource_path = 'assets'
-asset_directory = pkg_resources.resource_filename(resource_package, resource_path)
 
 ##Only load this part on first import, calling this on reload has dire consequences
 ## Note: there is still a bug where closing a previously plotted window and plotting another plot causes the window and the kernel to hang
 try:
 	magichappened
 except:
-	import IPython  
+	import IPython
 	ipy=IPython.get_ipython()
 	ipy.magic("pylab qt")
 	magichappened = False
@@ -48,9 +44,9 @@ def parseUnitAndNameFromColumnName(input):
 	reg = re.compile(r'\{(.*?)\}')
 	z = reg.findall(input)
 	return z
-	
 
-def loadCustomColormap(file=os.path.join(asset_directory,'cube1.txt')):
+
+def loadCustomColormap(file=helpers.get_asset('cube1.txt')):
 	do = np.loadtxt(file)
 	ccmap = mpl.colors.LinearSegmentedColormap.from_list('name',do)
 
@@ -62,14 +58,14 @@ def loadCustomColormap(file=os.path.join(asset_directory,'cube1.txt')):
 class plotR(object):
 	def __init__(self,file):
 		self.fig = None
-	        self.file = file
+		self.file = file
 
-		self.data  = Data.from_file(filepath=file) 
+		self.data  = Data.from_file(filepath=file)
 		self.name  = file
 		self.exportData = []
-                self.exportDataMeta = []
+		self.exportDataMeta = []
 		self.bControls = True #boolean controlling state of plot manipulation buttons
-		
+
 
 	def is2d(self,**kwargs):
 		nDim = self.data.ndim_sparse
@@ -80,38 +76,38 @@ class plotR(object):
 		filter_neg = np.array([not x for x in filter])
 
 		coords = np.array(self.data.coordkeys)
-		
+
 		return len(coords[filter_neg]) < 2
-	
+
 	def quickplot(self,**kwargs):
 		nDim = self.data.ndim_sparse
 
 		filter = self.data.dims < 5
 
 		coords = np.array(self.data.coordkeys)
-		
+
 		uniques_col_str = coords[filter]
 		print uniques_col_str
 
-		if self.is2d(): 
+		if self.is2d():
 			fig = self.plot2d(**kwargs)
 		else:
 			fig = self.plot3d(uniques_col_str=uniques_col_str,**kwargs)
-			self.exportToMtx() 
-		
+			self.exportToMtx()
+
 		return fig
 
 	def autoColorScale(self,data):
 		values, edges = np.histogram(data, 256)
 		maxima = edges[argrelmax(values,order=24)]
-		if maxima.size>0: 
+		if maxima.size>0:
 			cminlim , cmaxlim = maxima[0] , np.max(data)
 		else:
 			cminlim , cmaxlim = np.min(data) , np.max(data)
 		return (cminlim,cmaxlim)
 
-		
-        def plot3d(self,                	massage_func=None,
+
+	def plot3d(self,                	massage_func=None,
 						uniques_col_str=[],
 						drawCbar=True,
 						subplots_args={'top':0.96, 'bottom':0.17, 'left':0.14, 'right':0.85,'hspace':0.0},
@@ -126,42 +122,42 @@ class plotR(object):
 						cbar_orientation='vertical',
 						cbar_location ='normal',
 						**kwargs):
-                #some housekeeping
+		#some housekeeping
 		if not self.fig:
 			self.fig = plt.figure()
 		self.fig.subplots_adjust(**subplots_args)
 		self.ccmap = loadCustomColormap()
-                
+
 		#determine how many subplots we need
 		n_subplots = 1
 
-        #make a list of uniques per column associated with column name
+		#make a list of uniques per column associated with column name
 		uniques_by_column = dict(zip(self.data.coordkeys + self.data.valuekeys, self.data.dims))
 
-		#by this array  
+		#by this array
 		for i in uniques_col_str:
 			n_subplots *= uniques_by_column[i]
 
 		if n_index is not None:
 			n_index = np.array(n_index)
 			n_subplots = len(n_index)
-			
+
 		if n_subplots > 1:
 			width = 2
 		else:
 			width = 1
 		n_valueaxes = len(self.data.valuekeys)
 		width = n_valueaxes
-		n_subplots = n_subplots * n_valueaxes	
+		n_subplots = n_subplots * n_valueaxes
 		gs = gridspec.GridSpec(int(n_subplots/width)+n_subplots%width, width)
-		
+
 		cnt=0 #subplot counter
 
 		#enumerate over the generated list of unique values specified in the uniques columns
 		for j,ind in enumerate(self.data.make_filter_from_uniques_in_columns(uniques_col_str)):
 			#each value axis needs a plot
 			for value_axis in range(n_valueaxes):
-				
+
 				#plot only if number of the plot is indicated
 				if n_index is not None:
 					if j not in n_index:
@@ -172,20 +168,21 @@ class plotR(object):
 				#get the columns /not/ corresponding to uniques_cols
 				#find the coord_keys in the header
 				coord_keys = self.data.coordkeys
-			
+
 				#filter out the keys corresponding to unique value columns
-				us=uniques_col_str		
+				us=uniques_col_str
 				coord_keys = [key for key in coord_keys if key not in uniques_col_str ]
 				#now find out if there are multiple value axes
 				value_keys = self.data.valuekeys
-			
+
+
 				x=data_slice.loc[:,coord_keys[-2]]
 				y=data_slice.loc[:,coord_keys[-1]]
 				z=data_slice.loc[:,value_keys[value_axis]]
-			
+
 				xu = np.size(x.unique())
 				yu = np.size(y.unique())
-			
+
 
 				## if the measurement is not complete this will probably fail so trim off the final sweep?
 				print('xu: {:d}, yu: {:d}, lenz: {:d}'.format(xu,yu,len(z)))
@@ -225,7 +222,7 @@ class plotR(object):
 				ext = xlims+ylims
 				self.extent = ext
 				self.XX = XX
-			
+
 				self.exportData.append(XX)
 				try:
 					m={
@@ -247,9 +244,9 @@ class plotR(object):
 				else:
 					ax = ax_destination
 				cbar_title = ''
-			
 
-			
+
+
 				if type(style) != list:
 					style = list([style])
 
@@ -274,23 +271,23 @@ class plotR(object):
 				cbar_title = cbar_trans_formatted + w['cbar_quantity'] + ' (' + w['cbar_unit'] + ')'
 				if len(w['cbar_trans']) is not 0:
 					cbar_title = cbar_title + ')'
-			
-		  		XX = np.rot90(XX)
-			
+
+				XX = np.rot90(XX)
+
 				if 'deinterlace' in style:
 					self.fig = plt.figure()
 					ax_deinter_odd  = plt.subplot(2, 1, 1)
 					xx_odd = np.rot90(w['deinterXXodd'])
 					ax_deinter_odd.imshow(xx_odd,extent=ext, cmap=plt.get_cmap(self.ccmap),aspect=aspect,interpolation=interpolation)
 					self.deinterXXodd_data = xx_odd
-				
+
 					ax_deinter_even = plt.subplot(2, 1, 2)
 					xx_even = np.rot90(w['deinterXXeven'])
 					ax_deinter_even.imshow(xx_even,extent=ext, cmap=plt.get_cmap(self.ccmap),aspect=aspect,interpolation=interpolation)
 					self.deinterXXeven_data = xx_even
 				else:
 					self.im = ax.imshow(XX,extent=ext, cmap=plt.get_cmap(self.ccmap),aspect=aspect,interpolation=interpolation, norm=w['imshow_norm'],clim=clim)
-      				        self.im.set_clim(self.autoColorScale(XX.flatten()))
+					self.im.set_clim(self.autoColorScale(XX.flatten()))
 
 				if 'flipaxes' in style:
 					ax.set_xlabel(coord_keys[-1])
@@ -298,7 +295,7 @@ class plotR(object):
 				else:
 					ax.set_xlabel(coord_keys[-2])
 					ax.set_ylabel(coord_keys[-1])
-							
+
 
 				title = ''
 				for i in uniques_col_str:
@@ -313,8 +310,8 @@ class plotR(object):
 					if cbar_location == 'inset':
 						if cbar_orientation == 'horizontal':
 							cax = inset_axes(ax,width='30%',height='10%',loc=2,borderpad=1)
-						else: 
-							cax = inset_axes(ax,width='30%',height='10%',loc=1)						
+						else:
+							cax = inset_axes(ax,width='30%',height='10%',loc=1)
 					else:
 						divider = make_axes_locatable(ax)
 						if cbar_orientation == 'horizontal':
@@ -325,7 +322,7 @@ class plotR(object):
 					if hasattr(self, 'im'):
 						self.cbar = plt.colorbar(self.im, cax=cax,orientation=cbar_orientation)
 						cbar = self.cbar
-					
+
 						if cbar_orientation == 'horizontal':
 							cbar.set_label(cbar_title,labelpad=-20, x=1.35)
 	# 						cbar.ax.xaxis.set_label_position('top')
@@ -333,85 +330,84 @@ class plotR(object):
 						else:
 							cbar.set_label(cbar_title)#,labelpad=-19, x=1.32)
 				cnt+=1 #counter for subplots
-
 		self.toggleFiddle()
 		self.toggleLinedraw()
 		self.toggleLinecut()
 		return self.fig
-	
-	def plot2d(self,fiddle=False,n_index=None,value_axis = -1,style=['normal'],**kwargs):
+
+	def plot2d(self,fiddle=False,n_index=None,value_axis = -1,style=['normal'],uniques_col_str=None,**kwargs):
 		if not self.fig:
 			self.fig = plt.figure()
-				
+
 		coord_keys = self.data.coordkeys
 		value_keys = self.data.valuekeys
 		#assume 2d plots with data in the two last columns
-		uniques_col_str = coord_keys[:-1]
-		
-		
+		if uniques_col_str is None:
+			uniques_col_str = coord_keys[:-1]
+
 		uniques_axis_designations = []
 		#do some filtering of the colstr to get seperate name and unit of said name
 		for a in uniques_col_str:
 			uniques_axis_designations.append(parseUnitAndNameFromColumnName(a))
-				
+
 		uniques_col = self.data[uniques_col_str]
 		if n_index is not None:
 			n_index = np.array(n_index)
 			n_subplots = len(n_index)
-		
-		for i,j in enumerate(buildLogicals(uniques_col)):
+
+		for i,j in enumerate(self.data.make_filter_from_uniques_in_columns(uniques_col_str)):
 			if n_index is not None:
 					if i not in n_index:
 						continue
-			filtereddata = self.data.loc[j]
+			data = self.data.sorted_data[j]
 			title =''
 			for i,z in enumerate(uniques_col_str):
-				title = '\n'.join([title, '{:s}: {:g}'.format(uniques_axis_designations[i],self.data[z].iloc[0])])
+				title = '\n'.join([title, '{:s}: {:g}'.format(uniques_axis_designations[i],data[z].iloc[0])])
 
-			x =  np.array(self.data.sorted_data.loc[:,coord_keys[-1]])
-			y =  np.array(self.data.sorted_data.loc[:,value_keys[value_axis]])
-	
+			x =  np.array(data.loc[:,coord_keys[-1]])
+			y =  np.array(data.loc[:,value_keys[value_axis]])
+
 			wrap = styles.getPopulatedWrap(style)
 			wrap['XX'] = y
 			styles.processStyle(style,wrap)
 			ax = plt.plot(x,wrap['XX'],label=title,**kwargs)
-				
-		
+
+
 		plt.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3,
 			   ncol=2, mode="expand", borderaxespad=0.)
 		ax = self.fig.axes[0]
 		xaxislabel = parseUnitAndNameFromColumnName(coord_keys[-1])
 		yaxislabel = parseUnitAndNameFromColumnName(value_keys[value_axis])
-		
+
 		ax.set_xlabel(xaxislabel[0]+'(' + xaxislabel[1] +')')
 		ax.set_ylabel(yaxislabel[0]+'(' + yaxislabel[1] +')')
 		return self.fig
-		
+
 
 	def starplot(self,style=[]):
 		if not self.fig:
 			self.fig = plt.figure()
-		
+
 		data=self.data
 		coordkeys = self.data.coordkeys
 		valuekeys = self.data.valuekeys
-		
+
 		coordkeys_notempty=[k for k in coordkeys if len(data[k].unique()) > 1]
 		n_subplots = len(coordkeys_notempty)
 		width = 2
 		import matplotlib.gridspec as gridspec
 		gs = gridspec.GridSpec(int(n_subplots/width)+n_subplots%width, width)
 
-		
+
 		for n,k in enumerate(coordkeys_notempty):
 			ax = plt.subplot(gs[n])
 			for v in valuekeys:
 				y= data[v]
-				
+
 				wrap = styles.getPopulatedWrap(style)
 				wrap['XX'] = y
 				styles.processStyle(style,wrap)
-				
+
 				ax.plot(data[k], wrap['XX'])
 			ax.set_title(k)
 		return self.fig
@@ -425,14 +421,14 @@ class plotR(object):
 		y=self.data.sorted_data.iloc[:,-2]
  		if (max(y) == -1*min(y) and max(y) <= 150):
  			style.extend(['mov_avg(m=1,n=10)','didv','mov_avg(m=1,n=5)','abs'])
-			
+
 		#default style is 'log'
 		style.append('log')
 
 		return style
-		
 
-	
+
+
 	def toggleLinedraw(self):
 		self.linedraw=Linedraw(self.fig)
 
@@ -440,7 +436,7 @@ class plotR(object):
 		topwidget = self.fig.canvas.topLevelWidget()
 		toolbar = topwidget.children()[2]
 		action = toolbar.addWidget(self.fig.drawbutton)
-		
+
 		self.fig.linedraw = self.linedraw
 	def toggleLinecut(self):
 		self.linecut=Linecut(self.fig,self)
@@ -449,12 +445,12 @@ class plotR(object):
 		topwidget = self.fig.canvas.topLevelWidget()
 		toolbar = topwidget.children()[2]
 		action = toolbar.addWidget(self.fig.cutbutton)
-		
+
 		self.fig.linecut = self.linecut
-		
+
 	def toggleFiddle(self):
 		from IPython.core import display
-		
+
 		if (mpl.get_backend() == 'Qt4Agg' or 'nbAgg'):
 			self.fiddle = Fiddle(self.fig)
 
@@ -466,7 +462,7 @@ class plotR(object):
 			#attach to the relevant figure to make sure the object does not go out of scope
 			self.fig.fiddle = self.fiddle
 
-	
+
 	def toggleControls(self,state=None):
 		self.bControls = not self.bControls
 		if state == None:
@@ -474,7 +470,7 @@ class plotR(object):
 
 
 
-	
+
 	def exportToMtx(self):
 
 		for j, i in enumerate(self.exportData):
