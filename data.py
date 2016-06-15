@@ -36,7 +36,7 @@ class dat_parser(parser):
     def parseheader(self,filebuffer):
 
         for i, line in enumerate(filebuffer):
-            if i < 3:
+	    if i < 3:
                 continue
             if i > 5:
                 if line[0] != '#': #find the skiprows accounting for the first linebreak in the header
@@ -47,7 +47,7 @@ class dat_parser(parser):
         filebuffer.seek(0)
         headertext = [next(filebuffer) for x in xrange(headerlength)]
         headertext= ''.join(headertext)
-        filebuffer.seek(0) #put it back to 0 in case someone else naively reads the filebuffer
+	filebuffer.seek(0) #put it back to 0 in case someone else naively reads the filebuffer
         #doregex
         coord_expression = re.compile(r"""                  ^\#\s*Column\s(.*?)\:
                                                             [\r\n]{0,2}
@@ -150,8 +150,8 @@ class Data(pandas.DataFrame):
         return coord_keys
     @property
     def valuekeys(self):
-        value_keys = [i['name'] for i in self._header if i['type']=='value' ]
-        return value_keys
+	value_keys = [i['name'] for i in self._header if i['type']=='value' ]
+	return value_keys
 
     @property
     def sorted_data(self):
@@ -196,7 +196,7 @@ class Data(pandas.DataFrame):
     # 2, 5
     #uniques of first column [1,2], second column [3,4,5]
     #go through list and recursively combine all unique values
-        xs = self[columns]
+        xs = self.sorted_data[columns]
         if xs.shape[1] > 1:
             for i in xs.iloc[:,0].unique():
                 if math.isnan(i):

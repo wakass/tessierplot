@@ -3,20 +3,15 @@
 
 import matplotlib.pyplot as plt
 import matplotlib as mpl
-
-
-from mpl_toolkits.mplot3d import Axes3D
-from matplotlib import cm
-from matplotlib.widgets import Button,Line2D
-from scipy.signal import argrelmax
 import matplotlib.gridspec as gridspec
+from mpl_toolkits.mplot3d import Axes3D
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+
+from scipy.signal import argrelmax
 
 import numpy as np
 import math
-
 import re
-import os
-_moduledir = os.path.dirname(os.path.realpath(__file__))
 
 #all tessier related imports
 from gui import *
@@ -36,7 +31,6 @@ except:
 	magichappened = False
 else:
 	magichappened = True
-from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 
 
@@ -98,6 +92,8 @@ class plotR(object):
 		return fig
 
 	def autoColorScale(self,data):
+		#filter out NaNs or infinities, should any have crept in
+		data = data[np.isfinite(data)]
 		values, edges = np.histogram(data, 256)
 		maxima = edges[argrelmax(values,order=24)]
 		if maxima.size>0:
@@ -461,13 +457,6 @@ class plotR(object):
 
 			#attach to the relevant figure to make sure the object does not go out of scope
 			self.fig.fiddle = self.fiddle
-
-
-	def toggleControls(self,state=None):
-		self.bControls = not self.bControls
-		if state == None:
-			toggleFiddle()
-
 
 
 
