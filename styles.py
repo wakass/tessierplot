@@ -258,7 +258,14 @@ styles = STYLE_FUNCS
 
 def getEmptyWrap():
 	'''Get empty wrap with default parameter values'''
-	w = {'ext':(0,0,0,0), 'ystep':1, 'XX': [], 'cbar_quantity': '', 'cbar_unit': 'a.u.', 'cbar_trans': [], 'imshow_norm': None}
+	w = {'ext':(0,0,0,0), 
+		'ystep':1,
+		'X': [],
+		'XX': [], 
+		'cbar_quantity': '',
+		'cbar_unit': 'a.u.',
+		'cbar_trans': [], 
+		'imshow_norm': None}
 	return w
 
 def getPopulatedWrap(style=[]):
@@ -302,7 +309,7 @@ def getPopulatedWrap(style=[]):
 							except ValueError:
 								pass						
 						w['{:s}_{:s}'.format(s, spregex.group(1))] = val
-						
+	
 			# Process non-keyword arguments and default values
 			(i, j) = (0, 0)
 			pnames = STYLE_SPECS[s]['param_order']

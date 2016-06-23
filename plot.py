@@ -103,7 +103,7 @@ class plotR(object):
 		return (cminlim,cmaxlim)
 
 
-	def plot3d(self,                	massage_func=None,
+	def plot3d(self,    massage_func=None,
 						uniques_col_str=[],
 						drawCbar=True,
 						subplots_args={'top':0.96, 'bottom':0.17, 'left':0.14, 'right':0.85,'hspace':0.0},
@@ -119,9 +119,10 @@ class plotR(object):
 						cbar_location ='normal',
 						**kwargs):
 		#some housekeeping
-		if not self.fig:
+		if not self.fig and not ax_destination:
 			self.fig = plt.figure()
-		self.fig.subplots_adjust(**subplots_args)
+			self.fig.subplots_adjust(**subplots_args)
+			
 		self.ccmap = loadCustomColormap()
 
 		#determine how many subplots we need
@@ -283,7 +284,8 @@ class plotR(object):
 					self.deinterXXeven_data = xx_even
 				else:
 					self.im = ax.imshow(XX,extent=ext, cmap=plt.get_cmap(self.ccmap),aspect=aspect,interpolation=interpolation, norm=w['imshow_norm'],clim=clim)
-					self.im.set_clim(self.autoColorScale(XX.flatten()))
+					if not clim:
+						self.im.set_clim(self.autoColorScale(XX.flatten()))
 
 				if 'flipaxes' in style:
 					ax.set_xlabel(coord_keys[-1])
@@ -326,17 +328,37 @@ class plotR(object):
 						else:
 							cbar.set_label(cbar_title)#,labelpad=-19, x=1.32)
 				cnt+=1 #counter for subplots
-		self.toggleFiddle()
-		self.toggleLinedraw()
-		self.toggleLinecut()
+		if self.fig:
+			self.toggleFiddle()
+			self.toggleLinedraw()
+			self.toggleLinecut()
 		return self.fig
 
-	def plot2d(self,fiddle=False,n_index=None,value_axis = -1,style=['normal'],uniques_col_str=None,**kwargs):
-		if not self.fig:
+	def plot2d(self,fiddle=False,
+					n_index=None,
+					value_axis = -1,
+					style=['normal'],
+					uniques_col_str=None,
+					legend=True,
+					ax_destination=None,
+					subplots_args={'top':0.96, 'bottom':0.17, 'left':0.14, 'right':0.85,'hspace':0.0},
+					massage_func=None,
+					**kwargs):
+					
+		if not self.fig and not ax_destination:
 			self.fig = plt.figure()
+			self.fig.subplots_adjust(**subplots_args)
+
+		n_valueaxes = len(self.data.valuekeys)
+		width = n_valueaxes
+		n_subplots = 1 #keep at 1 for now
+		n_subplots = n_subplots * n_valueaxes
+		gs = gridspec.GridSpec(int(n_subplots/width)+n_subplots%width, width)
+
 
 		coord_keys = self.data.coordkeys
 		value_keys = self.data.valuekeys
+		
 		#assume 2d plots with data in the two last columns
 		if uniques_col_str is None:
 			uniques_col_str = coord_keys[:-1]
@@ -351,32 +373,51 @@ class plotR(object):
 			n_index = np.array(n_index)
 			n_subplots = len(n_index)
 
+		ax = None
 		for i,j in enumerate(self.data.make_filter_from_uniques_in_columns(uniques_col_str)):
 			if n_index is not None:
 					if i not in n_index:
 						continue
 			data = self.data.sorted_data[j]
+			#get the columns /not/ corresponding to uniques_cols
+			#find the coord_keys in the header
+			coord_keys = self.data.coordkeys
+
+			#filter out the keys corresponding to unique value columns
+			us=uniques_col_str
+			coord_keys = [key for key in coord_keys if key not in uniques_col_str ]
+			#now find out if there are multiple value axes
+			value_keys = self.data.valuekeys
+
+			x=data.loc[:,coord_keys[-1]]
+			y=data.loc[:,value_keys[value_axis]]
+
+						
 			title =''
 			for i,z in enumerate(uniques_col_str):
 				title = '\n'.join([title, '{:s}: {:g}'.format(uniques_axis_designations[i],data[z].iloc[0])])
 
-			x =  np.array(data.loc[:,coord_keys[-1]])
-			y =  np.array(data.loc[:,value_keys[value_axis]])
-
 			wrap = styles.getPopulatedWrap(style)
 			wrap['XX'] = y
+			wrap['X']  = x
+			wrap['massage_func'] = massage_func
 			styles.processStyle(style,wrap)
-			ax = plt.plot(x,wrap['XX'],label=title,**kwargs)
+			if ax_destination:
+				ax = ax_destination
+			else:
+				cnt =0
+				ax = plt.subplot(gs[cnt])
+			ax.plot(wrap['X'],wrap['XX'],label=title,**kwargs)
 
-
-		plt.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3,
-			   ncol=2, mode="expand", borderaxespad=0.)
-		ax = self.fig.axes[0]
+		if legend:
+			plt.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3,
+				   ncol=2, mode="expand", borderaxespad=0.)
+# 		ax = self.fig.axes[0]
 		xaxislabel = parseUnitAndNameFromColumnName(coord_keys[-1])
 		yaxislabel = parseUnitAndNameFromColumnName(value_keys[value_axis])
-
-		ax.set_xlabel(xaxislabel[0]+'(' + xaxislabel[1] +')')
-		ax.set_ylabel(yaxislabel[0]+'(' + yaxislabel[1] +')')
+		if ax:
+			ax.set_xlabel(xaxislabel[0]+'(' + xaxislabel[1] +')')
+			ax.set_ylabel(yaxislabel[0]+'(' + yaxislabel[1] +')')
 		return self.fig
 
 
