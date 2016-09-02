@@ -18,7 +18,7 @@ from gui import *
 import styles
 from data import Data
 import helpers
-
+import colorbar
 
 ##Only load this part on first import, calling this on reload has dire consequences
 ## Note: there is still a bug where closing a previously plotted window and plotting another plot causes the window and the kernel to hang
@@ -283,7 +283,7 @@ class plotR(object):
 					ax_deinter_even.imshow(xx_even,extent=ext, cmap=plt.get_cmap(self.ccmap),aspect=aspect,interpolation=interpolation)
 					self.deinterXXeven_data = xx_even
 				else:
-					self.im = ax.imshow(XX,extent=ext, cmap=plt.get_cmap(self.ccmap),aspect=aspect,interpolation=interpolation, norm=w['imshow_norm'],clim=clim)
+					self.im = ax.imshow(XX,extent=ext, cmap=plt.get_cmap(self.ccmap),aspect=aspect,interpolation=interpolation, norm=colorbar.MultiPointNormalize(),clim=clim)
 					if not clim:
 						self.im.set_clim(self.autoColorScale(XX.flatten()))
 
@@ -318,7 +318,7 @@ class plotR(object):
 							cax = divider.append_axes("right", size="2.5%", pad=0.05)
 						pos = list(ax.get_position().bounds)
 					if hasattr(self, 'im'):
-						self.cbar = plt.colorbar(self.im, cax=cax,orientation=cbar_orientation)
+						self.cbar = colorbar.create_colorbar(cax, self.im, orientation=cbar_orientation)
 						cbar = self.cbar
 
 						if cbar_orientation == 'horizontal':
@@ -490,7 +490,6 @@ class plotR(object):
 
 		if (mpl.get_backend() == 'Qt4Agg' or 'nbAgg'):
 			self.fiddle = Fiddle(self.fig)
-
 			self.fig.fiddlebutton = toggleButton('fiddle', self.fiddle.connect)
 			topwidget = self.fig.canvas.topLevelWidget()
 			toolbar = topwidget.children()[2]
