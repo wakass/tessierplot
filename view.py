@@ -398,5 +398,5 @@ class tessierView(object):
         """
         temp = jj.Template(out)
 
-        plotcommand = """import tessierPlot as ts; reload(ts); p = ts.plotR(file); p.quickplot(style= %s) """      
+        plotcommand = """from tessierplot import plot as ts; reload(ts); p = ts.plotR(file); p.quickplot(style= %s) """      
         return temp.render(items=all_relative,plotcommand=plotcommand)

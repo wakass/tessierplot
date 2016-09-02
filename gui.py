@@ -2,6 +2,9 @@ from PyQt4.QtGui import QToolButton
 from PyQt4 import QtCore,QtGui
 import numpy as np
 from matplotlib.widgets import Line2D
+import numpy as np
+import matplotlib.pyplot as plt
+
 import helpers
 
 class toggleButton(QtGui.QToolButton):
@@ -221,8 +224,6 @@ class Linedraw:
 		'on release we reset the press data'
 		self.press = None
 
-import numpy as np
-import matplotlib.pyplot as plt
 class Linecut:
 	def __init__(self,fig,plotr):
 		self.fig = fig
