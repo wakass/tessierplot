@@ -36,7 +36,6 @@ class SuperColorbar(ColorbarBase):
         #all is awell
         self.press = None
         self._dragtick = None
-        print self._normticks
     def on_press(self, event):
         contains, attrd = self.ax.contains(event)
         if not contains: return
@@ -103,10 +102,15 @@ class MultiPointNormalize(colors.Normalize):
     def __call__(self, value, clip=None):
         # Ignoring masked values and all kinds of edge cases
         if self.points is None:
-            point = (self.vmax - self.vmin)/2. + self.vmin
+            points = [(self.vmax - self.vmin)/2. + self.vmin]
         else:
-            point = self.points[0]
-        x, y = [self.vmin, point, self.vmax], [0, 0.5, 1]
+            points = self.points
+
+        points = np.array(points)
+        points.sort()
+        x = np.hstack((self.vmin, points,self.vmax))
+        y = np.linspace(0, 1, len(points)+2)
+
         return np.ma.masked_array(np.interp(value, x, y))
 
 if __name__ == "__main__":
