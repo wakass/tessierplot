@@ -143,18 +143,26 @@ class plotR(object):
 			width = 2
 		else:
 			width = 1
-		n_valueaxes = len(self.data.valuekeys)
-		width = n_valueaxes
-		n_subplots = n_subplots * n_valueaxes
+		n_valueaxes = len(self.data.valuekeys)	
+		
+		if value_axis == -1:
+			value_axes = range(n_valueaxes)
+		else:
+			value_axes = list([value_axis])
+		
+		width = len(value_axes)
+		n_subplots = n_subplots *width
 		gs = gridspec.GridSpec(int(n_subplots/width)+n_subplots%width, width)
+		
 
 		cnt=0 #subplot counter
 
 		#enumerate over the generated list of unique values specified in the uniques columns
 		for j,ind in enumerate(self.data.make_filter_from_uniques_in_columns(uniques_col_str)):
 			#each value axis needs a plot
-			for value_axis in range(n_valueaxes):
 
+			for value_axis in value_axes:
+				
 				#plot only if number of the plot is indicated
 				if n_index is not None:
 					if j not in n_index:
@@ -338,7 +346,7 @@ class plotR(object):
 					n_index=None,
 					value_axis = -1,
 					style=['normal'],
-					uniques_col_str=None,
+					uniques_col_str=[],
 					legend=True,
 					ax_destination=None,
 					subplots_args={'top':0.96, 'bottom':0.17, 'left':0.14, 'right':0.85,'hspace':0.0},
@@ -349,12 +357,36 @@ class plotR(object):
 			self.fig = plt.figure()
 			self.fig.subplots_adjust(**subplots_args)
 
-		n_valueaxes = len(self.data.valuekeys)
-		width = n_valueaxes
-		n_subplots = 1 #keep at 1 for now
-		n_subplots = n_subplots * n_valueaxes
-		gs = gridspec.GridSpec(int(n_subplots/width)+n_subplots%width, width)
+			#determine how many subplots we need
+		n_subplots = 1
 
+		#make a list of uniques per column associated with column name
+		uniques_by_column = dict(zip(self.data.coordkeys + self.data.valuekeys, self.data.dims))
+
+		#by this array
+		for i in uniques_col_str:
+			n_subplots *= uniques_by_column[i]
+
+		if n_index is not None:
+			n_index = np.array(n_index)
+			n_subplots = len(n_index)
+
+		if n_subplots > 1:
+			width = 2
+		else:
+			width = 1
+		n_valueaxes = len(self.data.valuekeys)
+		if value_axis == -1:
+			value_axes = range(n_valueaxes)
+		else:
+			if type(value_axis) is not list:
+				value_axes = list([value_axis])
+			else:
+				value_axes = value_axis
+		
+		width = len(value_axes)
+		n_subplots = n_subplots *width
+		gs = gridspec.GridSpec(int(n_subplots/width)+n_subplots%width, width)
 
 		coord_keys = self.data.coordkeys
 		value_keys = self.data.valuekeys
@@ -372,52 +404,53 @@ class plotR(object):
 		if n_index is not None:
 			n_index = np.array(n_index)
 			n_subplots = len(n_index)
-
+		cnt=0
 		ax = None
 		for i,j in enumerate(self.data.make_filter_from_uniques_in_columns(uniques_col_str)):
-			if n_index is not None:
-					if i not in n_index:
-						continue
-			data = self.data.sorted_data[j]
-			#get the columns /not/ corresponding to uniques_cols
-			#find the coord_keys in the header
-			coord_keys = self.data.coordkeys
+		
+			for value_axis in value_axes:
+				if n_index is not None:
+						if i not in n_index:
+							continue
+				data = self.data.sorted_data[j]
+				#get the columns /not/ corresponding to uniques_cols
+				#find the coord_keys in the header
+				coord_keys = self.data.coordkeys
 
-			#filter out the keys corresponding to unique value columns
-			us=uniques_col_str
-			coord_keys = [key for key in coord_keys if key not in uniques_col_str ]
-			#now find out if there are multiple value axes
-			value_keys = self.data.valuekeys
+				#filter out the keys corresponding to unique value columns
+				us=uniques_col_str
+				coord_keys = [key for key in coord_keys if key not in uniques_col_str ]
+				#now find out if there are multiple value axes
+				value_keys = self.data.valuekeys
 
-			x=data.loc[:,coord_keys[-1]]
-			y=data.loc[:,value_keys[value_axis]]
+				x=data.loc[:,coord_keys[-1]]
+				y=data.loc[:,value_keys[value_axis]]
 
-						
-			title =''
-			for i,z in enumerate(uniques_col_str):
-				title = '\n'.join([title, '{:s}: {:g}'.format(uniques_axis_designations[i],data[z].iloc[0])])
+							
+				title =''
+				for i,z in enumerate(uniques_col_str):
+					title = '\n'.join([title, '{:s}: {:g}'.format(uniques_axis_designations[i],data[z].iloc[0])])
 
-			wrap = styles.getPopulatedWrap(style)
-			wrap['XX'] = y
-			wrap['X']  = x
-			wrap['massage_func'] = massage_func
-			styles.processStyle(style,wrap)
-			if ax_destination:
-				ax = ax_destination
-			else:
-				cnt =0
-				ax = plt.subplot(gs[cnt])
-			ax.plot(wrap['X'],wrap['XX'],label=title,**kwargs)
-
-		if legend:
-			plt.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3,
-				   ncol=2, mode="expand", borderaxespad=0.)
-# 		ax = self.fig.axes[0]
-		xaxislabel = parseUnitAndNameFromColumnName(coord_keys[-1])
-		yaxislabel = parseUnitAndNameFromColumnName(value_keys[value_axis])
-		if ax:
-			ax.set_xlabel(xaxislabel[0]+'(' + xaxislabel[1] +')')
-			ax.set_ylabel(yaxislabel[0]+'(' + yaxislabel[1] +')')
+				wrap = styles.getPopulatedWrap(style)
+				wrap['XX'] = y
+				wrap['X']  = x
+				wrap['massage_func'] = massage_func
+				styles.processStyle(style,wrap)
+				if ax_destination:
+					ax = ax_destination
+				else:
+					ax = plt.subplot(gs[cnt])
+				ax.plot(wrap['X'],wrap['XX'],label=title,**kwargs)
+				cnt+=1
+				if legend:
+					plt.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3,
+						   ncol=2, mode="expand", borderaxespad=0.)
+		# 		ax = self.fig.axes[0]
+				xaxislabel = parseUnitAndNameFromColumnName(coord_keys[-1])
+				yaxislabel = parseUnitAndNameFromColumnName(value_keys[value_axis])
+				if ax:
+					ax.set_xlabel(xaxislabel[0]+'(' + xaxislabel[1] +')')
+					ax.set_ylabel(yaxislabel[0]+'(' + yaxislabel[1] +')')
 		return self.fig
 
 
