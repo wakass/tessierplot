@@ -129,9 +129,9 @@ class tessierView(object):
             thumbfile = None #if fail no thumbfile was created
             print 'Error {:s} for file {:s}'.format(e,file)
             pass
-            
-        #put back the old settings
-        pylab.rcParams = rcP_old
+        finally:
+            #put back the old settings
+            pylab.rcParams.update(rcP_old)
 
         return thumbfile
 
