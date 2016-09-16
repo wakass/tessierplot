@@ -228,12 +228,12 @@ class tessierView(object):
             <div class='row'>
         {% endif %}
 
-            <div class='col'>
+            <div id='{{ item.datapath }}' class='col'>
 
                 <div class='name'> {{ item.measname }} </div>
 
                 <div class='thumb'>
-                        <img src="{{ item.thumbpath }}"/> 
+                        <img src="{{ item.thumbpath }}?{{ nowstring }}"/> 
                 </div>
 
                 <div class='controls'>
@@ -271,14 +271,30 @@ class tessierView(object):
     
     
         <script type="text/Javascript">
+            var py_callbacks =[];
             function handle_output(out){
-                    
+                // done executing python output now filter on which event
+                if (out.msg_type == "execute_result") {
+                    for (var key in py_callbacks) {
+                        key = py_callbacks[key]
+                        if (out.parent_header.msg_id == key.msg_id) {
+                            //call the callback with arguments
+                            key.cb(key.cb_args);
+                            //and remove from the list
+                            py_callbacks.pop(key); 
+                        }
+                    }
+                }
             }
-            function pycommand(exec){
+            function pycommand(exec,cb,cb_args){
                 exec = exec.replace(/\\\\/g,"\\\\\\\\");
                 var kernel = IPython.notebook.kernel;
                 var callbacks = { 'iopub' : {'output' : handle_output}};
                 var msg_id = kernel.execute(exec, callbacks, {silent:false});
+                
+                if (cb != undefined) { 
+                    py_callbacks.push({msg_id: msg_id, cb: cb, cb_args: cb_args});
+                }
             }
             function jump(h){
                 var url = location.href;               //Save down the URL without hash.
@@ -294,8 +310,16 @@ class tessierView(object):
                 pycommand(exec);
             }
             function refresh(id) {
-                exec =' import tessierView as tv;  a=tv.tessierView();a.makethumbnail(\"' + id + '\",override=True)';
-                pycommand(exec);
+                id = id.replace(/\\\\/g,"\\\\\\\\");
+
+                exec ='from tessierplot import view;  a=view.tessierView();a.makethumbnail(\"' + id + '\",override=True)';
+                pycommand(exec,refresh_callback,id);
+                
+            }
+            function refresh_callback(id) {
+                var x = document.querySelectorAll('div[id=\\"'+id+'\\"]')[0];
+                var img = x.getElementsByTagName('img')[0];
+                img.src = img.src.split('?')[0] + '?' + new Date().getTime();
             }
             function getStyle(id) {
                 id = id.replace(/\\\\/g,"\\\\\\\\");
@@ -398,5 +422,8 @@ class tessierView(object):
         """
         temp = jj.Template(out)
 
-        plotcommand = """from tessierplot import plot as ts; reload(ts); p = ts.plotR(file); p.quickplot(style= %s) """      
-        return temp.render(items=all_relative,plotcommand=plotcommand)
+        plotcommand = """from tessierplot import plot as ts; reload(ts); p = ts.plotR(file); p.quickplot(style= %s) """
+        import datetime
+        d=datetime.datetime.utcnow()
+        nowstring = d.strftime('%Y%m%d%H%M%S')
+        return temp.render(items=all_relative,plotcommand=plotcommand,nowstring=nowstring)
