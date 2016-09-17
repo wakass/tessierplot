@@ -21,8 +21,7 @@ and plot them in a nice grid.
 ```python
 from tessierplot import view
 
-view.tessierView(rootdir='/where/my/naturepublicationmeasurements/are',
-filemask='.*.dat.gz$')
+view.tessierView(rootdir='/where/my/naturepublicationmeasurements/are', filemask='.*.dat.gz$')
 ```
 
 As can be seen tessierView takes 2 potential arguments. The rootdir is
@@ -44,8 +43,7 @@ p.quickplot() #automagically figures out if it's a 2d or 3d plot and
 plots accordingly
 p.plot2d() #plot in 2d
 p.plot3d() #plot in..hey 3d.
-p.starplot() #starplot measurement files only, only plot datapoints
-for each separate axis
+p.starplot() #starplot measurement files only, only plot datapoints for each separate axis
 ```
 #### uniques_col_str
 By supplying a ```uniques_col_str``` parameter to a plot command the
@@ -108,7 +106,7 @@ and you can process the data inline.
 
 ```python
 def special_style(wrapper):
-	#do some fancy 
+	#do some fancy manipulation of your data
 	wrapper['X'] #xdata in 2d, empty for 3d
 	wrapper['XX'] #ydata/zdata, depending on 2d or 3d
 
