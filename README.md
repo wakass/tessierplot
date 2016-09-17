@@ -39,8 +39,7 @@ other type of plot.
 from tessierplot import plot
 
 p = plot.plotR('mymeasurementfilelocation.dat.gz')
-p.quickplot() #automagically figures out if it's a 2d or 3d plot and
-plots accordingly
+p.quickplot() #automagically figures out if it's a 2d or 3d plot and plots accordingly
 p.plot2d() #plot in 2d
 p.plot3d() #plot in..hey 3d.
 p.starplot() #starplot measurement files only, only plot datapoints for each separate axis
