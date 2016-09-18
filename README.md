@@ -44,7 +44,9 @@ p.plot2d() #plot in 2d
 p.plot3d() #plot in..hey 3d.
 p.starplot() #starplot measurement files only, only plot datapoints for each separate axis
 ```
-#### uniques_col_str
+
+### uniques_col_str ###
+
 By supplying a ```uniques_col_str``` parameter to a plot command the
 way the data is segmented can be altered.
 
@@ -59,7 +61,7 @@ logical to plot only n 3d plots with the value of x being indicated
 per plot.
 
 You can manually supply which columns contain these 'unique' coordinates. In
-this particular example one could supply ```p.quickplot(uniques_col_str=['x'])```.
+this particular example one could supply ```p.plot3d(uniques_col_str=['x'])``` or, if y is also pretty sparse ```p.plot2d(uniques_col_str=['x','y'])``` .
 
 #### styles
 plotR support several default ''styles'' that can be applied to the
@@ -68,7 +70,7 @@ data to make your life a bit easier.
 e.g.
 
 ```python
-p.plot3d(style=['mov_avg(n=1,m=2','didv'])
+p.plot3d(style=['mov_avg(n=1,m=2)','didv'])
 ```
 applies a moving average filtering, and a subsequent derivative. Other
 filters at this time are:
