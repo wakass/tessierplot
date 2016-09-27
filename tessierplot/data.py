@@ -13,16 +13,21 @@ class parser(object):
         pass
 
 class dat_parser(parser):
-    def __init__(self,filename):
+    def __init__(self,filename=None,filebuffer=None):
         self._file = filename
+        self._filebuffer = filebuffer
+        
+
         super(dat_parser,self).__init__()
 
-    def parse(self,filebuffer=None):
+    def parse(self):
+        filebuffer = self._filebuffer
         if filebuffer == None:
             f = open(self._file)
         else:
             f = filebuffer
-        self._header,self._headerlength = self.parseheader(f)
+            self._filebuffer = filebuffer
+        self._header,self._headerlength = self.parseheader()
 
         self._data = pandas.read_csv(f,
                                  sep='\t', \
@@ -33,8 +38,8 @@ class dat_parser(parser):
 
     def is_valid(self):
         pass
-    def parseheader(self,filebuffer):
-
+    def parseheader(self):
+        filebuffer = self._filebuffer
         for i, line in enumerate(filebuffer):
 	    if i < 3:
                 continue
@@ -82,18 +87,19 @@ class dat_parser(parser):
         return header,headerlength
 
 class gz_parser(dat_parser):
-    def __init__(self,file):
-        super(gz_parser,self).__init__(file)
-        self._file = file
-
-    def parse(self):
+    def __init__(self,filename):
+        self._file = filename
+        
         import gzip
         f = open(self._file,'rb')
         if (f.read(2) == '\x1f\x8b'):
             f.seek(0)
-            return super(gz_parser,self).parse(filebuffer=gzip.GzipFile(fileobj=f))
+            gz = super(gz_parser,self).__init__(filename=filename,filebuffer=gzip.GzipFile(fileobj=f))
+            return gz
         else:
             raise Exception('Not a valid gzip file')
+        
+        
 
 class Data(pandas.DataFrame):
     #supported filetypes
@@ -126,12 +132,25 @@ class Data(pandas.DataFrame):
         return None
 
     @classmethod
-    def load_file(cls,filepath):
+    def load_header_only(cls,filepath):
+        parser = cls.determine_parser(filepath)
+        header,headerlength = parser(filepath).parseheader()
+        df = Data()
+        df._header = header
+        return df
+    
+    @classmethod
+    def determine_parser(cls,filepath):
         ftype = cls.determine_filetype(filepath)
         if ftype is not None:
             parser = cls._FILETYPES[ftype]
         else:
             raise Exception('Unknown filetype')
+        return parser
+    
+    @classmethod
+    def load_file(cls,filepath):
+        parser = cls.determine_parser(filepath)
         p = parser(filepath)
         p.parse()
         return p._data,p._header
@@ -150,8 +169,8 @@ class Data(pandas.DataFrame):
         return coord_keys
     @property
     def valuekeys(self):
-	value_keys = [i['name'] for i in self._header if i['type']=='value' ]
-	return value_keys
+        value_keys = [i['name'] for i in self._header if i['type']=='value' ]
+        return value_keys
 
     @property
     def sorted_data(self):
