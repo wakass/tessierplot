@@ -74,17 +74,15 @@ class plotR(object):
 		return len(coords[filter_neg]) < 2
 
 	def quickplot(self,**kwargs):
-		nDim = self.data.ndim_sparse
-
-		filter = self.data.dims < 5
-
 		coords = np.array(self.data.coordkeys)
-
+		filter = self.data.dims < 5
+		
 		uniques_col_str = coords[filter]
+
 		print uniques_col_str
 
 		if self.is2d():
-			fig = self.plot2d(**kwargs)
+			fig = self.plot2d(uniques_col_str=uniques_col_str,**kwargs)
 		else:
 			fig = self.plot3d(uniques_col_str=uniques_col_str,**kwargs)
 			self.exportToMtx()
@@ -359,13 +357,19 @@ class plotR(object):
 
 			#determine how many subplots we need
 		n_subplots = 1
-
+		coord_keys = self.data.coordkeys
+		value_keys = self.data.valuekeys
 		#make a list of uniques per column associated with column name
 		uniques_by_column = dict(zip(self.data.coordkeys + self.data.valuekeys, self.data.dims))
 
+		#assume 2d plots with data in the two last columns
+		if len(uniques_col_str) == 0:
+			uniques_col_str = coord_keys[:-1]
+
 		#by this array
-		for i in uniques_col_str:
-			n_subplots *= uniques_by_column[i]
+# 		for i in uniques_col_str:
+# 			n_subplots *= uniques_by_column[i]
+
 
 		if n_index is not None:
 			n_index = np.array(n_index)
@@ -385,30 +389,24 @@ class plotR(object):
 				value_axes = value_axis
 		
 		width = len(value_axes)
-		n_subplots = n_subplots *width
+		n_subplots = n_subplots * width
 		gs = gridspec.GridSpec(int(n_subplots/width)+n_subplots%width, width)
 
-		coord_keys = self.data.coordkeys
-		value_keys = self.data.valuekeys
 		
-		#assume 2d plots with data in the two last columns
-		if uniques_col_str is None:
-			uniques_col_str = coord_keys[:-1]
-
 		uniques_axis_designations = []
-		#do some filtering of the colstr to get seperate name and unit of said name
+		#do some filtering of the colstr to get separate name and unit of said name
 		for a in uniques_col_str:
 			uniques_axis_designations.append(parseUnitAndNameFromColumnName(a))
 
-		uniques_col = self.data[uniques_col_str]
+
 		if n_index is not None:
 			n_index = np.array(n_index)
 			n_subplots = len(n_index)
-		cnt=0
+
 		ax = None
 		for i,j in enumerate(self.data.make_filter_from_uniques_in_columns(uniques_col_str)):
 		
-			for value_axis in value_axes:
+			for k,value_axis in enumerate(value_axes):
 				if n_index is not None:
 						if i not in n_index:
 							continue
@@ -419,18 +417,18 @@ class plotR(object):
 
 				#filter out the keys corresponding to unique value columns
 				us=uniques_col_str
-				coord_keys = [key for key in coord_keys if key not in uniques_col_str ]
+				coord_keys = [key for key in coord_keys if key not in uniques_col_str]
 				#now find out if there are multiple value axes
 				value_keys = self.data.valuekeys
 
 				x=data.loc[:,coord_keys[-1]]
 				y=data.loc[:,value_keys[value_axis]]
-
-							
+	
 				title =''
+
 				for i,z in enumerate(uniques_col_str):
 					title = '\n'.join([title, '{:s}: {:g}'.format(uniques_axis_designations[i],data[z].iloc[0])])
-
+				
 				wrap = styles.getPopulatedWrap(style)
 				wrap['XX'] = y
 				wrap['X']  = x
@@ -439,9 +437,9 @@ class plotR(object):
 				if ax_destination:
 					ax = ax_destination
 				else:
-					ax = plt.subplot(gs[cnt])
+					ax = plt.subplot(gs[k])
 				ax.plot(wrap['X'],wrap['XX'],label=title,**kwargs)
-				cnt+=1
+
 				if legend:
 					plt.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3,
 						   ncol=2, mode="expand", borderaxespad=0.)
