@@ -16,7 +16,6 @@ class dat_parser(parser):
     def __init__(self,filename=None,filebuffer=None):
         self._file = filename
         self._filebuffer = filebuffer
-        
 
         super(dat_parser,self).__init__()
 
@@ -24,6 +23,7 @@ class dat_parser(parser):
         filebuffer = self._filebuffer
         if filebuffer == None:
             f = open(self._file)
+            self._filebuffer = f
         else:
             f = filebuffer
             self._filebuffer = filebuffer
