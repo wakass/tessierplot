@@ -2,6 +2,7 @@
 #tessierView for couch potato convenience...
 
 import plot as ts
+import data
 import jinja2 as jj
 import matplotlib.pyplot as plt
 import pylab
@@ -73,11 +74,13 @@ def overridethumbnail(file, fig):
 
 
 class tessierView(object):
-    def __init__(self, rootdir='./', filemask='.*\.dat(?:\.gz)?$',filterstring=''):
+    def __init__(self, rootdir='./', filemask='.*\.dat(?:\.gz)?$',filterstring='',headercheck=None):
         self._root = rootdir
         self._filemask = filemask
         self._filterstring = filterstring
         self._allthumbs = []
+        self._headercheck = headercheck
+        
         
         #check for and create thumbnail dir
         thumbnaildir = os.path.dirname(getthumbcachepath('./'))
@@ -146,7 +149,7 @@ class tessierView(object):
             if num_sep + level <= num_sep_this:
                 del dirs[:]
             
-    def walk(self,filemask,filterstring,**kwargs):
+    def walk(self, filemask, filterstring, headercheck=None,**kwargs):
         paths = (self._root,)
         images = 0
         self.allthumbs = []
@@ -177,13 +180,16 @@ class tessierView(object):
 
                 if filterstring in open(self.getsetfilepath(fullpath)).read():   #liable for improvement
                 #check for certain parameters with filterstring in the set file: e.g. 'dac4: 1337.0'
-                    thumbpath = self.makethumbnail(fullpath,**kwargs)
-                    if thumbpath:
-                        self._allthumbs.append({'datapath':fullpath,
-                                             'thumbpath':thumbpath,
-                                             'datedir':datedir, 
-                                             'measname':measname})
-                        images += 1
+
+                    df = data.Data.load_header_only(fullpath)
+                    if headercheck is None or df.coordkeys[-2] == headercheck:
+                        thumbpath = self.makethumbnail(fullpath,**kwargs)
+                        if thumbpath:
+                            self._allthumbs.append({'datapath':fullpath,
+                                                 'thumbpath':thumbpath,
+                                                 'datedir':datedir, 
+                                                 'measname':measname})
+                            images += 1
 
         return self._allthumbs
     def _ipython_display_(self):
@@ -193,7 +199,7 @@ class tessierView(object):
         display(HTML(self.genhtml(refresh=refresh)))
         
     def genhtml(self,refresh=False):
-        self.walk(self._filemask,'dac',override=refresh) #Change override to True if you want forced refresh of thumbs
+        self.walk(filemask=self._filemask,filterstring='dac',headercheck=self._headercheck,override=refresh) #Change override to True if you want forced refresh of thumbs
         #unobfuscate the file relative to the working directory
         #since files are served from ipyhton notebook from ./files/
         all_relative = [{ 

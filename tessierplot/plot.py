@@ -334,7 +334,8 @@ class plotR(object):
 						else:
 							cbar.set_label(cbar_title)#,labelpad=-19, x=1.32)
 				cnt+=1 #counter for subplots
-		if self.fig:
+
+		if self.fig and (mpl.get_backend() in ['Qt4Agg' , 'nbAgg']):
 			self.toggleFiddle()
 			self.toggleLinedraw()
 			self.toggleLinecut()
@@ -519,15 +520,14 @@ class plotR(object):
 	def toggleFiddle(self):
 		from IPython.core import display
 
-		if (mpl.get_backend() == 'Qt4Agg' or 'nbAgg'):
-			self.fiddle = Fiddle(self.fig)
-			self.fig.fiddlebutton = toggleButton('fiddle', self.fiddle.connect)
-			topwidget = self.fig.canvas.topLevelWidget()
-			toolbar = topwidget.children()[2]
-			action = toolbar.addWidget(self.fig.fiddlebutton)
+		self.fiddle = Fiddle(self.fig)
+		self.fig.fiddlebutton = toggleButton('fiddle', self.fiddle.connect)
+		topwidget = self.fig.canvas.topLevelWidget()
+		toolbar = topwidget.children()[2]
+		action = toolbar.addWidget(self.fig.fiddlebutton)
 
-			#attach to the relevant figure to make sure the object does not go out of scope
-			self.fig.fiddle = self.fiddle
+		#attach to the relevant figure to make sure the object does not go out of scope
+		self.fig.fiddle = self.fiddle
 
 
 
