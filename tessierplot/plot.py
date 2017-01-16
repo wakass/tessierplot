@@ -104,15 +104,17 @@ class plotR(object):
 	def plot3d(self,    massage_func=None,
 						uniques_col_str=[],
 						drawCbar=True,
+						cax_destination=None,
 						subplots_args={'top':0.96, 'bottom':0.17, 'left':0.14, 'right':0.85,'hspace':0.0},
 						ax_destination=None,
 						n_index=None,
 						style='log',
 						clim=None,
 						aspect='auto',
-						interpolation='none',
+						interpolation='nearest',
 						value_axis=-1,
 						sweepoverride=False,
+						imshow=True,
 						cbar_orientation='vertical',
 						cbar_location ='normal',
 						**kwargs):
@@ -220,8 +222,8 @@ class plotR(object):
 				ylims = (y.min(),y.max())
 
 				#determine stepsize for di/dv, inprincipe only y step is used (ie. the diff is also taken in this direction and the measurement swept..)
-				xstep = (xlims[0] - xlims[1])/xu
-				ystep = (ylims[0] - ylims[1])/yu
+				xstep = (xlims[1] - xlims[0])/xu
+				ystep = (ylims[1] - ylims[0])/yu
 				ext = xlims+ylims
 				self.extent = ext
 				self.XX = XX
@@ -275,8 +277,6 @@ class plotR(object):
 				if len(w['cbar_trans']) is not 0:
 					cbar_title = cbar_title + ')'
 
-				XX = np.rot90(XX)
-
 				if 'deinterlace' in style:
 					self.fig = plt.figure()
 					ax_deinter_odd  = plt.subplot(2, 1, 1)
@@ -289,7 +289,13 @@ class plotR(object):
 					ax_deinter_even.imshow(xx_even,extent=ext, cmap=plt.get_cmap(self.ccmap),aspect=aspect,interpolation=interpolation)
 					self.deinterXXeven_data = xx_even
 				else:
-					self.im = ax.imshow(XX,extent=ext, cmap=plt.get_cmap(self.ccmap),aspect=aspect,interpolation=interpolation, norm=colorbar.MultiPointNormalize(),clim=clim)
+					if imshow:
+						self.im = ax.imshow(np.rot90(XX),extent=ext, cmap=plt.get_cmap(self.ccmap),aspect=aspect,interpolation=interpolation, norm=colorbar.MultiPointNormalize(),clim=clim)
+					else:
+						xs = np.linspace(ext[0],ext[1],XX.shape[0])
+						ys = np.linspace(ext[2],ext[3],XX.shape[1])
+						xv,yv = np.meshgrid(xs,ys)
+						self.im = ax.pcolormesh(xv,yv,np.rot90(np.fliplr(XX)),cmap=plt.get_cmap(self.ccmap))
 					if not clim:
 						self.im.set_clim(self.autoColorScale(XX.flatten()))
 
@@ -311,7 +317,10 @@ class plotR(object):
 				# of ax and the padding between cax and ax will be fixed at 0.05 inch.
 				if drawCbar:
 					from mpl_toolkits.axes_grid.inset_locator import inset_axes
-					if cbar_location == 'inset':
+					cax = None
+					if cax_destination:
+						cax = cax_destination
+					elif cbar_location == 'inset':
 						if cbar_orientation == 'horizontal':
 							cax = inset_axes(ax,width='30%',height='10%',loc=2,borderpad=1)
 						else:
@@ -328,7 +337,7 @@ class plotR(object):
 						cbar = self.cbar
 
 						if cbar_orientation == 'horizontal':
-							cbar.set_label(cbar_title,labelpad=-20, x=1.35)
+							cbar.set_label(cbar_title,labelpad=0, x=.35)
 	# 						cbar.ax.xaxis.set_label_position('top')
 	# 						cbar.ax.yaxis.set_label_position('left')
 						else:

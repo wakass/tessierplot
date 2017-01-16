@@ -66,8 +66,8 @@ def helper_didv(w):
 		w['XX'] = np.append(w['XX'],w['XX'][-1])
 	else:
 		w['XX'] = np.diff(w['XX'],axis=1)
-	#1 nA / 1 mV = 0.0129064037 conductance quanta
-	w['XX'] = w['XX'] / w['ystep'] * 0.0129064037
+	#1 nA / 1 mV = 0.02581281 * (e^2/h) #conversion for siemens to half a conductance quantum e^2/h
+	w['XX'] = w['XX'] / w['ystep'] * 0.02581281
 	w['cbar_quantity'] = 'dI/dV'
 	w['cbar_unit'] = '$\mu$Siemens'
 	w['cbar_unit'] = r'$\mathrm{e}^2/\mathrm{h}$'
@@ -75,7 +75,7 @@ def helper_didv(w):
 def helper_sgdidv(w):
 	'''Perform Savitzky-Golay smoothing and get 1st derivative'''
 	w['XX'] = signal.savgol_filter(
-			w['XX'], int(w['sgdidv_samples']), int(w['sgdidv_order']), deriv=1, delta=w['ystep'] / 0.0129064037)
+			w['XX'], int(w['sgdidv_samples']), int(w['sgdidv_order']), deriv=1, delta=w['ystep'] / 0.02581281)
 	w['cbar_quantity'] = 'dI/dV'
 	w['cbar_unit'] = '$\mu$Siemens'
 	w['cbar_unit'] = r'$\mathrm{e}^2/\mathrm{h}$'
@@ -143,7 +143,7 @@ def helper_flipxaxis(w):
 def helper_crosscorr(w):
 	A = w['XX']
 	first = (w['crosscorr_toFirstColumn'])
-	B = A.copy() 
+	B = A.copy()
 	#x in terms of linetrace, (y in terms of 3d plot)
 	x = np.linspace(w['ext'][2],w['ext'][3],A.shape[1])
 	x_org = x.copy()
@@ -155,6 +155,8 @@ def helper_crosscorr(w):
 
 		B = B[:,peak]
 		x = x[peak]
+		
+	offsets = np.array([])
 	for i in range(B.shape[0]-1):
 		#fit all peaks on B and calculate offset
 		if first:
@@ -165,10 +167,12 @@ def helper_crosscorr(w):
 		next_column = B[i+1,:]
 		
 		offset = get_offset(x,column,next_column)
+		offsets = np.append(offsets,offset)
 		#modify A (and B for fun?S::S)
 		A[i+1,:] = np.interp(x_org+offset,x_org,A[i+1,:])
 		B[i+1,:] = np.interp(x+offset,x,B[i+1,:])
-		
+	
+	w['offsets'] = 	offsets
 	w['XX'] = A
 
 
@@ -198,8 +202,7 @@ def helper_deint_cross(w):
 
 def helper_massage(w):
 	func = w['massage_func']
-	w['XX'] = func(w)['XX']
-
+	func(w)
 
 STYLE_FUNCS = {
 	'deinterlace': helper_deinterlace,
