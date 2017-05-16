@@ -60,7 +60,6 @@ class plotR(object):
 		self.exportDataMeta = []
 		self.bControls = True #boolean controlling state of plot manipulation buttons
 
-
 	def is2d(self,**kwargs):
 		nDim = self.data.ndim_sparse
 		#if the uniques of a dimension is less than x, plot in sequential 2d, otherwise 3d
@@ -78,8 +77,6 @@ class plotR(object):
 		filter = self.data.dims < 5
 		
 		uniques_col_str = coords[filter]
-
-		print uniques_col_str
 
 		if self.is2d():
 			fig = self.plot2d(uniques_col_str=uniques_col_str,**kwargs)
@@ -453,12 +450,20 @@ class plotR(object):
 				if legend:
 					plt.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3,
 						   ncol=2, mode="expand", borderaxespad=0.)
-		# 		ax = self.fig.axes[0]
+				ax = self.fig.axes[0]
 				xaxislabel = parseUnitAndNameFromColumnName(coord_keys[-1])
+
 				yaxislabel = parseUnitAndNameFromColumnName(value_keys[value_axis])
+				
 				if ax:
-					ax.set_xlabel(xaxislabel[0]+'(' + xaxislabel[1] +')')
-					ax.set_ylabel(yaxislabel[0]+'(' + yaxislabel[1] +')')
+					if xaxislabel:
+						ax.set_xlabel(xaxislabel[0]+'(' + xaxislabel[1] +')')
+					else:
+						ax.set_xlabel(coord_keys[-1]) # in case the label format does not fit our regex
+					if yaxislabel:
+						ax.set_ylabel(yaxislabel[0]+'(' + yaxislabel[1] +')')
+					else:
+						ax.set_ylabel(value_keys[value_axis])
 		return self.fig
 
 
