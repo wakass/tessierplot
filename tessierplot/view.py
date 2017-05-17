@@ -106,6 +106,7 @@ class tessierView(object):
         #create a thumbnail and store it in the same directory and in the thumbnails dir for local file serving, override options for if file already exists
         thumbfile = getthumbcachepath(file)
         #print file
+        
         thumbfile_datadir =  getthumbdatapath(file)
         try:
             if os.path.exists(thumbfile):
@@ -114,12 +115,15 @@ class tessierView(object):
                 #now make thumbnail because it doesnt exist or if u need to refresh
                 pylab.rcParams.update(rcP)
                 p = ts.plotR(file)
+
                 if len(p.data) > 20: ##just make sure really unfinished measurements are thrown out
                     is2d = p.is2d()
+                    
                     if is2d:
                         guessStyle = ['normal']
                     else :
                         guessStyle = p.guessStyle()
+
                     p.quickplot(style=guessStyle + style)
 
                     p.fig.savefig(thumbfile,bbox_inches='tight' )
@@ -177,7 +181,6 @@ class tessierView(object):
                 #extract the directory which is the date of measurement
                 datedir = os.path.basename(os.path.normpath(dir+'/../'))
                 
-
                 if filterstring in open(self.getsetfilepath(fullpath)).read():   #liable for improvement
                 #check for certain parameters with filterstring in the set file: e.g. 'dac4: 1337.0'
 
