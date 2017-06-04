@@ -106,6 +106,7 @@ class tessierView(object):
         #create a thumbnail and store it in the same directory and in the thumbnails dir for local file serving, override options for if file already exists
         thumbfile = getthumbcachepath(file)
         #print file
+        
         thumbfile_datadir =  getthumbdatapath(file)
         try:
             if os.path.exists(thumbfile):
@@ -114,12 +115,15 @@ class tessierView(object):
                 #now make thumbnail because it doesnt exist or if u need to refresh
                 pylab.rcParams.update(rcP)
                 p = ts.plotR(file)
+
                 if len(p.data) > 20: ##just make sure really unfinished measurements are thrown out
                     is2d = p.is2d()
+                    
                     if is2d:
                         guessStyle = ['normal']
                     else :
                         guessStyle = p.guessStyle()
+
                     p.quickplot(style=guessStyle + style)
 
                     p.fig.savefig(thumbfile,bbox_inches='tight' )
@@ -177,7 +181,6 @@ class tessierView(object):
                 #extract the directory which is the date of measurement
                 datedir = os.path.basename(os.path.normpath(dir+'/../'))
                 
-
                 if filterstring in open(self.getsetfilepath(fullpath)).read():   #liable for improvement
                 #check for certain parameters with filterstring in the set file: e.g. 'dac4: 1337.0'
 
@@ -217,20 +220,21 @@ class tessierView(object):
         
         <div id='outer'>
     
-    {% set columncount = 1 %}
-    {% set lastdate = '' %}
+    {% set ncolumns = 4 %}
+    {% set vars = {'lastdate': '', 'columncount': 1} %}
+
     {% for item in items %}
     
-        {% set isnewdate = (lastdate != item.datedir) %}
+        {% set isnewdate = (vars.lastdate != item.datedir) %}
         {% if isnewdate %}
-            {% set columncount = 1 %}
+            {% if vars.update({'columncount': 1}) %} {% endif %}
             {% if loop.index != 1 %}
                 </div> {# close previous row, but make sure no outer div is closed #}
             {% endif %}
             <div class='datesep'> {{item.datedir}} </div>                
         {% endif %}
         
-        {% if (columncount % 3 == 1) %}
+        {% if (vars.columncount % ncolumns == 1) %}
             <div class='row'>
         {% endif %}
 
@@ -266,12 +270,12 @@ class tessierView(object):
                     </form>            
                 </div>
             </div>
-        {% if (columncount % 3 == 0) %}
+        {% if (vars.columncount % ncolumns == 0) %}
             </div>
         {% endif %}
 
-        {% set lastdate = item.datedir %}
-        {% set columncount = columncount + 1 %}
+        {% if vars.update({'columncount': vars.columncount+1}) %} {% endif %}
+        {% if vars.update({'lastdate': item.datedir}) %} {% endif %}
     {% endfor %}    
     </div>
     
