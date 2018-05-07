@@ -33,6 +33,7 @@ class dat_parser(parser):
                                  sep='\t', \
                                  comment='#',
                                  skiprows=self._headerlength,
+                                 header=None,
                                  names=[i['name'] for i in self._header])
         return super(dat_parser,self).parse()
 
@@ -41,15 +42,22 @@ class dat_parser(parser):
     def parseheader(self):
         filebuffer = self._filebuffer
 
-        for i, line in enumerate(filebuffer):
-            if i < 3:
-                continue
-            if i > 5:
-                if line[0] != '#': #find the skiprows accounting for the first linebreak in the header
-                    headerlength = i
+        firstline = filebuffer.readline()
+        if not firstline: # for emtpy data files
+            return None,-1
+        if firstline[0] != '#': # for non-qtlab-like data files
+            headerlength = 1
+        else: # for qtlab-like data files featuring all kinds of information in python comment lines
+            filebuffer.seek(0)
+            for i, line in enumerate(filebuffer):
+                if i < 3:
+                    continue
+                if i > 5:
+                    if line[0] != '#': #find the skiprows accounting for the first linebreak in the header
+                        headerlength = i
+                        break
+                if i > 300:
                     break
-            if i > 300:
-                break
 
         filebuffer.seek(0)
         headertext = [next(filebuffer) for x in xrange(headerlength)]
