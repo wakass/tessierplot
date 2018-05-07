@@ -1,6 +1,18 @@
 #tessier.py
 #tools for plotting all kinds of files, with fiddle control etc
 
+##Only load this part on first import, calling this on reload has dire consequences
+## Note: there is still a bug where closing a previously plotted window and plotting another plot causes the window and the kernel to hang
+try:
+	magichappened
+except:
+	import IPython
+	ipy=IPython.get_ipython()
+	ipy.magic("pylab qt")
+	magichappened = False
+else:
+	magichappened = True
+
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 import matplotlib.gridspec as gridspec
@@ -20,23 +32,11 @@ from data import Data
 import helpers
 import colorbar
 
-##Only load this part on first import, calling this on reload has dire consequences
-## Note: there is still a bug where closing a previously plotted window and plotting another plot causes the window and the kernel to hang
-try:
-	magichappened
-except:
-	import IPython
-	ipy=IPython.get_ipython()
-	ipy.magic("pylab qt")
-	magichappened = False
-else:
-	magichappened = True
-
-
-
 def parseUnitAndNameFromColumnName(input):
 	reg = re.compile(r'\{(.*?)\}')
 	z = reg.findall(input)
+	if not z: # if names don't follow the convention, just use what you get
+		z = input
 	return z
 
 
@@ -60,7 +60,6 @@ class plotR(object):
 		self.exportDataMeta = []
 		self.bControls = True #boolean controlling state of plot manipulation buttons
 
-
 	def is2d(self,**kwargs):
 		nDim = self.data.ndim_sparse
 		#if the uniques of a dimension is less than x, plot in sequential 2d, otherwise 3d
@@ -76,10 +75,8 @@ class plotR(object):
 	def quickplot(self,**kwargs):
 		coords = np.array(self.data.coordkeys)
 		filter = self.data.dims < 5
-		
-		uniques_col_str = coords[filter]
 
-		print uniques_col_str
+		uniques_col_str = coords[filter]
 
 		if self.is2d():
 			fig = self.plot2d(uniques_col_str=uniques_col_str,**kwargs)
@@ -154,7 +151,6 @@ class plotR(object):
 		n_subplots = n_subplots *width
 		gs = gridspec.GridSpec(int(n_subplots/width)+n_subplots%width, width)
 		
-
 		cnt=0 #subplot counter
 
 		#enumerate over the generated list of unique values specified in the uniques columns
@@ -162,7 +158,6 @@ class plotR(object):
 			#each value axis needs a plot
 
 			for value_axis in value_axes:
-				
 				#plot only if number of the plot is indicated
 				if n_index is not None:
 					if j not in n_index:
@@ -242,7 +237,7 @@ class plotR(object):
 						'datasetname':self.name}
 					self.exportDataMeta = np.append(self.exportDataMeta,m)
 				except Exception,e:
-					print e
+					print(e)
 					pass
 				if ax_destination is None:
 					ax = plt.subplot(gs[cnt])
@@ -250,18 +245,20 @@ class plotR(object):
 					ax = ax_destination
 				cbar_title = ''
 
-
-
 				if type(style) != list:
 					style = list([style])
 
-
 				measAxisDesignation = parseUnitAndNameFromColumnName(value_keys[value_axis])
 				#wrap all needed arguments in a datastructure
-				cbar_quantity = measAxisDesignation[0]
-				cbar_unit = measAxisDesignation[1]
-				cbar_trans = [] #trascendental tracer :P For keeping track of logs and stuff
+				if measAxisDesignation:
+					if measAxisDesignation[1]:
+						cbar_quantity = measAxisDesignation[0]
+						cbar_unit = measAxisDesignation[1]
+					else:
+						cbar_quantity = measAxisDesignation
+						cbar_unit = ''
 
+				cbar_trans = [] #trascendental tracer :P For keeping track of logs and stuff
 				w = styles.getPopulatedWrap(style)
 				w2 = {'ext':ext, 'ystep':ystep,'XX': XX, 'cbar_quantity': cbar_quantity, 'cbar_unit': cbar_unit, 'cbar_trans':cbar_trans}
 				for k in w2:
@@ -311,6 +308,7 @@ class plotR(object):
 				for i in uniques_col_str:
 					title = '\n'.join([title, '{:s}: {:g} (mV)'.format(i,getattr(data_byuniques,i).iloc[0])])
 				print(title)
+
 				if 'notitle' not in style:
 					ax.set_title(title)
 				# create an axes on the right side of ax. The width of cax will be 5%
@@ -402,13 +400,11 @@ class plotR(object):
 		n_subplots = n_subplots * width
 		gs = gridspec.GridSpec(int(n_subplots/width)+n_subplots%width, width)
 
-		
 		uniques_axis_designations = []
 		#do some filtering of the colstr to get separate name and unit of said name
 		for a in uniques_col_str:
 			uniques_axis_designations.append(parseUnitAndNameFromColumnName(a))
-
-
+		
 		if n_index is not None:
 			n_index = np.array(n_index)
 			n_subplots = len(n_index)
@@ -453,12 +449,35 @@ class plotR(object):
 				if legend:
 					plt.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3,
 						   ncol=2, mode="expand", borderaxespad=0.)
-		# 		ax = self.fig.axes[0]
+				ax = self.fig.axes[0]
 				xaxislabel = parseUnitAndNameFromColumnName(coord_keys[-1])
 				yaxislabel = parseUnitAndNameFromColumnName(value_keys[value_axis])
+
+				if xaxislabel:
+					if not isinstance(xaxislabel, np.ndarray):
+						xaxisquantity = xaxislabel
+						xaxisunit = ''
+					else:
+						xaxisquantity = xaxislabel[0]
+						xaxisunit = xaxislabel[1]
+
+				if yaxislabel:
+					if not isinstance(yaxislabel, np.ndarray):
+						yaxisquantity = yaxislabel
+						yaxisunit = ''
+					else:
+						yaxisquantity = yaxislabel[0]
+						yaxisunit = yaxislabel[1]
+
 				if ax:
-					ax.set_xlabel(xaxislabel[0]+'(' + xaxislabel[1] +')')
-					ax.set_ylabel(yaxislabel[0]+'(' + yaxislabel[1] +')')
+					if isinstance(xaxislabel, np.ndarray):
+						ax.set_xlabel(xaxisquantity+'(' + xaxisunit +')')
+					else:
+						ax.set_xlabel(coord_keys[-1]) # in case the label format does not fit our regex
+					if isinstance(yaxislabel, np.ndarray):
+						ax.set_ylabel(yaxisquantity+'(' +yaxisunit +')')
+					else:
+						ax.set_ylabel(value_keys[value_axis])
 		return self.fig
 
 

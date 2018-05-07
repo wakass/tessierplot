@@ -33,6 +33,7 @@ class dat_parser(parser):
                                  sep='\t', \
                                  comment='#',
                                  skiprows=self._headerlength,
+                                 header=None,
                                  names=[i['name'] for i in self._header])
         return super(dat_parser,self).parse()
 
@@ -40,19 +41,28 @@ class dat_parser(parser):
         pass
     def parseheader(self):
         filebuffer = self._filebuffer
-        for i, line in enumerate(filebuffer):
-	    if i < 3:
-                continue
-            if i > 5:
-                if line[0] != '#': #find the skiprows accounting for the first linebreak in the header
-                    headerlength = i
+
+        firstline = filebuffer.readline()
+        if not firstline: # for emtpy data files
+            return None,-1
+        if firstline[0] != '#': # for non-qtlab-like data files
+            headerlength = 1
+        else: # for qtlab-like data files featuring all kinds of information in python comment lines
+            filebuffer.seek(0)
+            for i, line in enumerate(filebuffer):
+                if i < 3:
+                    continue
+                if i > 5:
+                    if line[0] != '#': #find the skiprows accounting for the first linebreak in the header
+                        headerlength = i
+                        break
+                if i > 300:
                     break
-            if i > 300:
-                break
+
         filebuffer.seek(0)
         headertext = [next(filebuffer) for x in xrange(headerlength)]
         headertext= ''.join(headertext)
-	filebuffer.seek(0) #put it back to 0 in case someone else naively reads the filebuffer
+        filebuffer.seek(0) #put it back to 0 in case someone else naively reads the filebuffer
         #doregex
         coord_expression = re.compile(r"""                  ^\#\s*Column\s(.*?)\:
                                                             [\r\n]{0,2}
@@ -63,6 +73,16 @@ class dat_parser(parser):
                                                             \#\s*size\:\s(.*?)
                                                             [\r\n]{0,2}
                                                             \#\s*start\:\s(.*?)
+                                                            [\r\n]{0,2}
+                                                            \#\s*type\:\s(.*?)[\r\n]{0,2}$
+
+                                                            """#annoying \r's...
+                                        ,re.VERBOSE |re.MULTILINE)
+        coord_expression_short = re.compile(r"""           ^\#\s*Column\s(.*?)\:
+                                                            [\r\n]{0,2}
+                                                            \#\s*name\:\s(.*?)
+                                                            [\r\n]{0,2}
+                                                            \#\s*size\:\s(.*?)
                                                             [\r\n]{0,2}
                                                             \#\s*type\:\s(.*?)[\r\n]{0,2}$
 
@@ -84,10 +104,17 @@ class dat_parser(parser):
         val = [dict(x) for x in val]
 
         header=coord+val
+
+        if not coord: # for data files without the 'start' and 'end' line in the header 
+            coord_short = coord_expression_short.findall(headertext)
+            coord_short = [ zip(('column','name','size','type'),x) for x in coord_short]
+            coord_short = [dict(x) for x in coord_short]
+            header=coord_short+val
+
         return header,headerlength
 
 class gz_parser(dat_parser):
-    def __init__(self,filename):
+    def __init__(self,filename,filebuffer=None):
         self._file = filename
         
         import gzip
@@ -134,7 +161,8 @@ class Data(pandas.DataFrame):
     @classmethod
     def load_header_only(cls,filepath):
         parser = cls.determine_parser(filepath)
-        header,headerlength = parser(filepath).parseheader()
+        p = parser(filename=filepath,filebuffer=open(filepath))
+        header,headerlength = p.parseheader()
         df = Data()
         df._header = header
         return df
@@ -142,6 +170,7 @@ class Data(pandas.DataFrame):
     @classmethod
     def determine_parser(cls,filepath):
         ftype = cls.determine_filetype(filepath)
+
         if ftype is not None:
             parser = cls._FILETYPES[ftype]
         else:
