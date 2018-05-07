@@ -10,6 +10,7 @@ import os
 from itertools import chain
 import numpy as np
 import re
+import win32api
 from IPython.display import VimeoVideo
 from IPython.display import display, HTML, display_html
 
@@ -74,13 +75,15 @@ def overridethumbnail(file, fig):
 
 
 class tessierView(object):
-    def __init__(self, rootdir='./', filemask='.*\.dat(?:\.gz)?$',filterstring='',headercheck=None):
+    def __init__(self, rootdir='./', filemask='.*\.dat(?:\.gz)?$',filterstring='',override=False,headercheck=None,style=[],showfilenames=False):
         self._root = rootdir
         self._filemask = filemask
         self._filterstring = filterstring
         self._allthumbs = []
         self._headercheck = headercheck
-        
+        self._style = style
+        self._override = override
+        self._showfilenames = showfilenames
         
         #check for and create thumbnail dir
         thumbnaildir = os.path.dirname(getthumbcachepath('./'))
@@ -100,12 +103,18 @@ class tessierView(object):
             file_Path = os.path.splitext(file_Path)[0]
         elif file_Extension != '.dat':
             print 'Wrong file extension'
-
-        return (file_Path + '.set')
+        setfilepath = file_Path + '.set'
+        
+        if not os.path.exists(setfilepath):
+            setfilepath = None
+        
+        return setfilepath
     def makethumbnail(self, file,override=False,style=[]):
         #create a thumbnail and store it in the same directory and in the thumbnails dir for local file serving, override options for if file already exists
         thumbfile = getthumbcachepath(file)
-        #print file
+        
+        if self._showfilenames:
+            print file
         
         thumbfile_datadir =  getthumbdatapath(file)
         try:
@@ -164,13 +173,20 @@ class tessierView(object):
             #in the current directory find all files matching the filemask
             for filename in filenames:
                 fullpath = os.path.join(root,filename)
-                #print fullpath
                 res = reg.findall(filename)
                 if res:
                     matches.append(fullpath)
             #found at least one file that matches the filemask
             if matches: 
-                fullpath = matches[0]                
+                fullpath = matches[0]
+
+                # check if filterstring can be found in the path
+                isinfilterstring = filterstring.lower() in fullpath.lower()
+                
+                fullname,fullext = os.path.split(fullpath)
+                fullname = win32api.GetShortPathName(fullname)    
+                fullpath = fullname + '/' + fullext
+
                 dir,basename =  os.path.split(fullpath)
                 
                 measname,ext1 = os.path.splitext(basename)
@@ -180,13 +196,18 @@ class tessierView(object):
                 
                 #extract the directory which is the date of measurement
                 datedir = os.path.basename(os.path.normpath(dir+'/../'))
-                
-                if filterstring in open(self.getsetfilepath(fullpath)).read():   #liable for improvement
-                #check for certain parameters with filterstring in the set file: e.g. 'dac4: 1337.0'
 
+                #check if filterstring can be found in the set file (e.g. 'dac4: 1337.0')
+                if not isinfilterstring:
+                    setfilepath = self.getsetfilepath(fullpath)
+                    if setfilepath: # only check for filterstring if set file exists
+                        isinfilterstring = filterstring in open(setfilepath).read()
+
+                if isinfilterstring:   #liable for improvement
                     df = data.Data.load_header_only(fullpath)
                     if headercheck is None or df.coordkeys[-2] == headercheck:
                         thumbpath = self.makethumbnail(fullpath,**kwargs)
+                        
                         if thumbpath:
                             self._allthumbs.append({'datapath':fullpath,
                                                  'thumbpath':thumbpath,
@@ -196,13 +217,16 @@ class tessierView(object):
 
         return self._allthumbs
     def _ipython_display_(self):
-        display_html(HTML(self.genhtml(refresh=False)))
+        
+        display_html(HTML(self.genhtml(refresh=False,style=self._style)))
     
     def htmlout(self,refresh=False):
         display(HTML(self.genhtml(refresh=refresh)))
         
-    def genhtml(self,refresh=False):
-        self.walk(filemask=self._filemask,filterstring='dac',headercheck=self._headercheck,override=refresh) #Change override to True if you want forced refresh of thumbs
+    def genhtml(self,refresh=False,**kwargs):
+        if self._override:
+            refresh = True
+        self.walk(filemask=self._filemask,filterstring=self._filterstring,headercheck=self._headercheck,override=refresh,**kwargs) #Change override to True if you want forced refresh of thumbs
         #unobfuscate the file relative to the working directory
         #since files are served from ipyhton notebook from ./files/
         all_relative = [{ 
@@ -254,19 +278,19 @@ class tessierView(object):
                     <button id='{{ item.datapath }}' onClick='plotwithStyle(this.id)' class='plotStyleSelect'>Plot with</button>
                     <form name='{{ item.datapath }}'>
                     <select name="selector">
-                        <option value="{{"[\\'\\']"|e}}">normal</option>
-                        <option value="{{"[\\'abs\\']"|e}}">abs</option>
-                        <option value="{{"[\\'log\\']"|e}}">log</option>
-                        <option value="{{"[\\'savgol\\',\\'log\\']"|e}}">savgol,log</option>
-                        <option value="{{"[\\'sgdidv\\']"|e}}">sgdidv</option>
-                        <option value="{{" [\\'sgdidv\\',\\'log\\']"|e}} ">sgdidv,log</option>
-                        <option value="{{" [\\'mov_avg(m=1,n=15)\\',\\'didv\\',\\'mov_avg(m=1,n=15)\\',\\'abs\\',\\'log\\' ]"|e}} ">Ultrasmooth didv</option>
-                        <option value="{{" [\\'mov_avg\\',\\'didv\\',\\'abs\\']"|e}} ">mov_avg,didv,abs</option>
-                        <option value="{{" [\\'mov_avg\\',\\'didv\\',\\'abs\\',\\'log\\']"|e}} ">mov_avg,didv,abs,log</option>
-                        <option value="{{" [\\'deinterlace0\\',\\'log\\']"|e}} ">deinterlace</option>
-                        <option value="{{" [\\'crosscorr\\']"|e}} ">Crosscorr</option>
+                        <option value="{{"\\'\\'"|e}}">normal</option>
+                        <option value="{{"\\'abs\\'"|e}}">abs</option>
+                        <option value="{{"\\'log\\'"|e}}">log</option>
+                        <option value="{{"\\'savgol\\',\\'log\\'"|e}}">savgol,log</option>
+                        <option value="{{"\\'sgdidv\\'"|e}}">sgdidv</option>
+                        <option value="{{"\\'sgdidv\\',\\'log\\'"|e}} ">sgdidv,log</option>
+                        <option value="{{"\\'mov_avg(m=1,n=15)\\',\\'didv\\',\\'mov_avg(m=1,n=15)\\',\\'abs\\',\\'log\\' "|e}} ">Ultrasmooth didv</option>
+                        <option value="{{"\\'mov_avg\\',\\'didv\\',\\'abs\\'"|e}} ">mov_avg,didv,abs</option>
+                        <option value="{{"\\'mov_avg\\',\\'didv\\',\\'abs\\',\\'log\\'"|e}} ">mov_avg,didv,abs,log</option>
+                        <option value="{{"\\'deinterlace0\\',\\'log\\'"|e}} ">deinterlace</option>
+                        <option value="{{"\\'crosscorr\\'"|e}} ">Crosscorr</option>
                     </select>
-
+                    <input type="checkbox" name="stylechecker" value="{{"\\'flipaxes\\',"|e}} ">Flip axes
                     </form>            
                 </div>
             </div>
@@ -336,7 +360,11 @@ class tessierView(object):
                 var x = document.querySelectorAll('form[name=\\"'+id+'\\"]')
                 form = x[0]; //should be only one form
                 selector = form.selector;
-                var style = selector.options[selector.selectedIndex].value;
+                var stylevalues = selector.options[selector.selectedIndex].value
+                if(form.stylechecker.checked) {
+                    stylevalues = form.stylechecker.value + stylevalues
+                }
+                var style = "["{{" + stylevalues + "|e}}"]";
                 return style
             }
             function plotwithStyle(id) {
