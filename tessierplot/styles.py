@@ -327,8 +327,8 @@ def getPopulatedWrap(style=[]):
 				i += 1
 		except Exception as e:
 			print('getPolulatedWrap(): Style {:s} does not exist ({:s})'.format(s, str(e)))
-			print e.__doc__
-			print e.args
+			print(e.__doc__)
+			print(e.args)
 			pass
 	return w
 
@@ -340,8 +340,8 @@ def processStyle(style, wrap):
 			func(wrap)
 		except Exception as e:
 			print('processStyle(): Style {:s} does not exist ({:s})'.format(s, str(e)))
-			print e.__doc__
-			print e.args
+			print(e.__doc__)
+			print(e.args)
 			pass
 
 
@@ -403,7 +403,7 @@ def get_offset(x,y1,y2):
                         ('b',0, False,  None,None,None)
                )
     result = mod.fit(ycorrfit,params=p,x=xcorrfit)
-#     print result.fit_report()
+#     print(result.fit_report())
     # todo:if result poorly conditioned throw it out and make offset 0
     
     
