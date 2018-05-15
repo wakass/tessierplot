@@ -3,21 +3,46 @@
 
 ##Only load this part on first import, calling this on reload has dire consequences
 ## Note: there is still a bug where closing a previously plotted window and plotting another plot causes the window and the kernel to hang
+
+try:
+	from PyQt5 import QtCore
+except:
+	isqt5 = False
+	try:
+		from PyQt4 import QtCore
+	except:
+		isqt4 = False
+	else:
+		isqt4 = True
+else:
+	isqt5=True
+
 try:
 	magichappened
 except:
 	import IPython
 	ipy=IPython.get_ipython()
-	ipy.magic("pylab qt")
+	if isqt5:
+		ipy.magic("pylab qt5")
+		qtaggregator = 'Qt5Agg'
+	elif isqt4:
+		ipy.magic("pylab qt")
+		qtaggregator = 'Qt4Agg'
+	else:
+		print('no backend found.')
 	magichappened = False
 else:
 	magichappened = True
 
-import matplotlib.pyplot as plt
 import matplotlib as mpl
+
+mpl.use(qtaggregator)
+
+import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 from mpl_toolkits.mplot3d import Axes3D
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+
 
 from scipy.signal import argrelmax
 
@@ -75,7 +100,6 @@ class plotR(object):
 	def quickplot(self,**kwargs):
 		coords = np.array(self.data.coordkeys)
 		filter = self.data.dims < 5
-
 		uniques_col_str = coords[filter]
 
 		if self.is2d():
@@ -264,6 +288,7 @@ class plotR(object):
 				for k in w2:
 					w[k] = w2[k]
 				w['massage_func']=massage_func
+
 				styles.processStyle(style, w)
 
 				#unwrap
@@ -307,7 +332,6 @@ class plotR(object):
 				title = ''
 				for i in uniques_col_str:
 					title = '\n'.join([title, '{:s}: {:g} (mV)'.format(i,getattr(data_byuniques,i).iloc[0])])
-				print(title)
 
 				if 'notitle' not in style:
 					ax.set_title(title)
@@ -341,8 +365,8 @@ class plotR(object):
 						else:
 							cbar.set_label(cbar_title)#,labelpad=-19, x=1.32)
 				cnt+=1 #counter for subplots
-
-		if self.fig and (mpl.get_backend() in ['Qt4Agg' , 'nbAgg']):
+		
+		if self.fig and (mpl.get_backend() in [qtaggregator, 'nbAgg']):
 			self.toggleFiddle()
 			self.toggleLinedraw()
 			self.toggleLinecut()
@@ -524,13 +548,11 @@ class plotR(object):
 
 		return style
 
-
-
 	def toggleLinedraw(self):
 		self.linedraw=Linedraw(self.fig)
 
 		self.fig.drawbutton = toggleButton('draw', self.linedraw.connect)
-		topwidget = self.fig.canvas.topLevelWidget()
+		topwidget = self.fig.canvas.window()
 		toolbar = topwidget.children()[2]
 		action = toolbar.addWidget(self.fig.drawbutton)
 
@@ -539,7 +561,7 @@ class plotR(object):
 		self.linecut=Linecut(self.fig,self)
 
 		self.fig.cutbutton = toggleButton('cut', self.linecut.connect)
-		topwidget = self.fig.canvas.topLevelWidget()
+		topwidget = self.fig.canvas.window()
 		toolbar = topwidget.children()[2]
 		action = toolbar.addWidget(self.fig.cutbutton)
 
@@ -550,7 +572,7 @@ class plotR(object):
 
 		self.fiddle = Fiddle(self.fig)
 		self.fig.fiddlebutton = toggleButton('fiddle', self.fiddle.connect)
-		topwidget = self.fig.canvas.topLevelWidget()
+		topwidget = self.fig.canvas.window()
 		toolbar = topwidget.children()[2]
 		action = toolbar.addWidget(self.fig.fiddlebutton)
 
