@@ -406,7 +406,6 @@ class plotR(object):
 			self.toggleFiddle()
 			self.toggleLinedraw()
 			self.toggleLinecut()
-			self.fig.show()
 		return self.fig
 
 	def plot2d(self,fiddle=False,
@@ -579,7 +578,7 @@ class plotR(object):
 		#autodidv function
 		y=self.data.sorted_data.iloc[:,-2]
 		if (max(y) == -1*min(y) and max(y) <= 150):
-			 style.extend(['mov_avg(m=1,n=10)','didv','mov_avg(m=1,n=5)','abs'])
+			style.extend(['mov_avg(m=1,n=10)','didv','mov_avg(m=1,n=5)','abs'])
 
 		#default style is 'log'
 		style.append('log')
