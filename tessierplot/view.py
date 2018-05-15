@@ -1,8 +1,8 @@
 #tessierMagic, where the real % happens
 #tessierView for couch potato convenience...
 
-from . import plot as ts
-from . import data
+import plot as ts
+import data
 import jinja2 as jj
 import matplotlib.pyplot as plt
 import pylab
@@ -13,7 +13,7 @@ import re
 import win32api
 from IPython.display import VimeoVideo
 from IPython.display import display, HTML, display_html
-from imp import reload
+
 
 reload(ts)
 
@@ -63,9 +63,9 @@ def overridethumbnail(file, fig):
         fig.savefig(thumbfile,bbox_inches='tight' )
         fig.savefig(thumbfile_datadir,bbox_inches='tight' )
         plt.close(fig)
-    except Exception as e:
+    except Exception,e:
         thumbfile = None #if fail no thumbfile was created
-        print('Error {:s} for file {:s}'.format(str(e),file))
+        print 'Error {:s} for file {:s}'.format(e,file)
         pass
         
     #put back the old settings
@@ -94,7 +94,7 @@ class tessierView(object):
                 raise Exception('Couldn\'t create thumbnail directory')
         
     def on(self):   
-        print('You are now watching through the glasses of ideology')
+        print 'You are now watching through the glasses of ideology'
         display(VimeoVideo('106036638'))
           
     def getsetfilepath(self,file):
@@ -102,7 +102,7 @@ class tessierView(object):
         if   file_Extension ==  '.gz':
             file_Path = os.path.splitext(file_Path)[0]
         elif file_Extension != '.dat':
-            print('Wrong file extension')
+            print 'Wrong file extension'
         setfilepath = file_Path + '.set'
         
         if not os.path.exists(setfilepath):
@@ -114,7 +114,7 @@ class tessierView(object):
         thumbfile = getthumbcachepath(file)
         
         if self._showfilenames:
-            print(file)
+            print file
         
         thumbfile_datadir =  getthumbdatapath(file)
         try:
@@ -124,7 +124,7 @@ class tessierView(object):
                 #now make thumbnail because it doesnt exist or if u need to refresh
                 pylab.rcParams.update(rcP)
                 p = ts.plotR(file)
-                
+
                 if len(p.data) > 20: ##just make sure really unfinished measurements are thrown out
                     is2d = p.is2d()
                     
@@ -141,9 +141,9 @@ class tessierView(object):
                     
                 else:
                     thumbfile = None
-        except Exception as e:
+        except Exception,e:
             thumbfile = None #if fail no thumbfile was created
-            print('Error {:s} for file {:s}'.format(str(e),file))
+            print 'Error {:s} for file {:s}'.format(e,file)
             pass
         finally:
             #put back the old settings

@@ -3,8 +3,6 @@ import os
 import re
 import numpy as np
 
-from six.moves import xrange
-
 class parser(object):
     def __init__(self):
         self._header = None
@@ -24,7 +22,7 @@ class dat_parser(parser):
     def parse(self):
         filebuffer = self._filebuffer
         if filebuffer == None:
-            f = open(self._file, mode='rb')
+            f = open(self._file)
             self._filebuffer = f
         else:
             f = filebuffer
@@ -43,16 +41,15 @@ class dat_parser(parser):
         pass
     def parseheader(self):
         filebuffer = self._filebuffer
-        firstline = filebuffer.readline().decode()
-        
+
+        firstline = filebuffer.readline()
         if not firstline: # for emtpy data files
             return None,-1
         if firstline[0] != '#': # for non-qtlab-like data files
             headerlength = 1
         else: # for qtlab-like data files featuring all kinds of information in python comment lines
             filebuffer.seek(0)
-            for i, linebuffer in enumerate(filebuffer):
-                line = linebuffer.decode()
+            for i, line in enumerate(filebuffer):
                 if i < 3:
                     continue
                 if i > 5:
@@ -64,7 +61,7 @@ class dat_parser(parser):
 
         filebuffer.seek(0)
         headertext = [next(filebuffer) for x in xrange(headerlength)]
-        headertext= b''.join(headertext)
+        headertext= ''.join(headertext)
         filebuffer.seek(0) #put it back to 0 in case someone else naively reads the filebuffer
         #doregex
         coord_expression = re.compile(r"""                  ^\#\s*Column\s(.*?)\:
@@ -99,8 +96,8 @@ class dat_parser(parser):
                                                                 \#\s*type\:\s(.*?)[\r\n]{0,2}$
                                                                 """
                                             ,re.VERBOSE |re.MULTILINE)
-        coord=  coord_expression.findall(headertext.decode('utf-8'))
-        val  = val_expression.findall(headertext.decode('utf-8'))
+        coord=  coord_expression.findall(headertext)
+        val  = val_expression.findall(headertext)
         coord = [ zip(('column','end','name','size','start','type'),x) for x in coord]
         coord = [dict(x) for x in coord]
         val = [ zip(('column','name','type'),x) for x in val]
@@ -109,7 +106,7 @@ class dat_parser(parser):
         header=coord+val
 
         if not coord: # for data files without the 'start' and 'end' line in the header 
-            coord_short = coord_expression_short.findall(headertext.decode('utf-8'))
+            coord_short = coord_expression_short.findall(headertext)
             coord_short = [ zip(('column','name','size','type'),x) for x in coord_short]
             coord_short = [dict(x) for x in coord_short]
             header=coord_short+val
@@ -122,7 +119,7 @@ class gz_parser(dat_parser):
         
         import gzip
         f = open(self._file,'rb')
-        if (f.read(2) == b'\x1f\x8b'):
+        if (f.read(2) == '\x1f\x8b'):
             f.seek(0)
             gz = super(gz_parser,self).__init__(filename=filename,filebuffer=gzip.GzipFile(fileobj=f))
             return gz
@@ -164,7 +161,7 @@ class Data(pandas.DataFrame):
     @classmethod
     def load_header_only(cls,filepath):
         parser = cls.determine_parser(filepath)
-        p = parser(filename=filepath,filebuffer=open(filepath,mode='rb'))
+        p = parser(filename=filepath,filebuffer=open(filepath))
         header,headerlength = p.parseheader()
         df = Data()
         df._header = header

@@ -51,11 +51,11 @@ import math
 import re
 
 #all tessier related imports
-from .gui import *
-from . import styles
-from .data import Data
-from . import helpers
-from . import colorbar
+from gui import *
+import styles
+from data import Data
+import helpers
+import colorbar
 
 def parseUnitAndNameFromColumnName(input):
 	reg = re.compile(r'\{(.*?)\}')
@@ -91,10 +91,10 @@ class plotR(object):
 
 		#maybe put logic here to plot some uniques as well from nonsequential axes?
 		filter = self.data.dims < 5
-		filter_neg = np.array([not x for x in filter],dtype="int")
+		filter_neg = np.array([not x for x in filter])
 
 		coords = np.array(self.data.coordkeys)
-		
+
 		return len(coords[filter_neg]) < 2
 
 	def quickplot(self,**kwargs):
@@ -260,7 +260,7 @@ class plotR(object):
 						'zname':'unused',
 						'datasetname':self.name}
 					self.exportDataMeta = np.append(self.exportDataMeta,m)
-				except Exception as e:
+				except Exception,e:
 					print(e)
 					pass
 				if ax_destination is None:
@@ -540,7 +540,7 @@ class plotR(object):
 
 		#autodidv function
 		y=self.data.sorted_data.iloc[:,-2]
-		if (max(y) == -1*min(y) and max(y) <= 150):
+ 		if (max(y) == -1*min(y) and max(y) <= 150):
  			style.extend(['mov_avg(m=1,n=10)','didv','mov_avg(m=1,n=5)','abs'])
 
 		#default style is 'log'

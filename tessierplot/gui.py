@@ -10,14 +10,14 @@ except ImportError:
 		from PyQt4 import QtCore
 		from PyQt4 import QtGui as qtwdgt
 	except ImportError:
-		print('You need PyQT4 or PyQT5')
+		print 'You need PyQT4 or PyQT5'
 
 import numpy as np
 from matplotlib.widgets import Line2D
 import numpy as np
 import matplotlib.pyplot as plt
 
-from . import helpers
+import helpers
 
 class toggleButton(qtwdgt.QToolButton):
     state = 0
