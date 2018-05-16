@@ -42,11 +42,11 @@ import math
 import re
 
 #all tessier related imports
-from gui import *
-import styles
-from data import Data
-import helpers
-import colorbar
+from .gui import *
+from . import styles
+from .data import Data
+from . import helpers
+from . import colorbar
 
 _plot_width = 7. # in inch (ffing inches eh)
 _plot_height = 5. # in inch
@@ -67,7 +67,7 @@ rcP = {  'figure.figsize': (_plot_width, _plot_height), #(width in inch, height 
 		'xtick.labelsize': _fontsize_axis_tick_labels,
 		'ytick.labelsize': _fontsize_axis_tick_labels,
 		'legend.fontsize': 5.,
-		'backend':'Qt4Agg'
+		'backend':qtaggregator
 		}
 
 rcP_thumb = {  'figure.figsize': (_plot_width_thumb, _plot_height_thumb), #(width in inch, height in inch)
@@ -75,7 +75,7 @@ rcP_thumb = {  'figure.figsize': (_plot_width_thumb, _plot_height_thumb), #(widt
 		'xtick.labelsize': _fontsize_axis_tick_labels,
 		'ytick.labelsize': _fontsize_axis_tick_labels,
 		'legend.fontsize': 5.,
-		'backend':'Qt4Agg'
+		'backend':qtaggregator
 		}
 		
 def parseUnitAndNameFromColumnName(input):
@@ -115,7 +115,7 @@ class plotR(object):
 
 		#maybe put logic here to plot some uniques as well from nonsequential axes?
 		filter = self.data.dims < 5
-		filter_neg = np.array([not x for x in filter])
+		filter_neg = np.array([not x for x in filter],dtype="bool")
 
 		coords = np.array(self.data.coordkeys)
 
@@ -142,7 +142,7 @@ class plotR(object):
 				fig.savefig(self.thumbfile,bbox_inches='tight' )
 				fig.savefig(self.thumbfile_datadir,bbox_inches='tight' )
 				plt.close(fig)
-		except Exception,e:
+		except Exception as e:
 			print('fail in quickplot')
 			print(e)
 		
@@ -153,10 +153,13 @@ class plotR(object):
 		data = data[np.isfinite(data)]
 		values, edges = np.histogram(data, 256)
 		maxima = edges[argrelmax(values,order=24)]
-		if maxima.size>0:
-			cminlim , cmaxlim = maxima[0] , np.max(data)
-		else:
-			cminlim , cmaxlim = np.min(data) , np.max(data)
+		try:
+			if maxima.size>0:
+				cminlim , cmaxlim = maxima[0] , np.max(data)
+			else:
+				cminlim , cmaxlim = np.min(data) , np.max(data)
+		except Exception as e:
+			print('autocolorscale crashed')
 		return (cminlim,cmaxlim)
 
 
@@ -246,16 +249,13 @@ class plotR(object):
 				
 				## if the measurement is not complete this will probably fail so trim off the final sweep?
 				print('xu: {:d}, yu: {:d}, lenz: {:d}'.format(xu,yu,len(z)))
-
 				if xu*yu != len(z):
-					xu = (len(z) / yu) #dividing integers so should automatically floor the value
-
+					xu = int(np.floor(len(z) / yu)) #dividing integers so should automatically floor the value
 				#trim the first part of the sweep, for different min max, better to trim last part?
 				#or the first since there has been sorting
 				#this doesnt work for e.g. a hilbert measurement
 
-				print('xu: {:d}, yu: {:d}, lenz: {:d}'.format(xu,yu,len(z)))
-
+				print('xu: {:d}, yu: {:d}, lenz: {:d} after trimming'.format(xu,yu,len(z)))
 				#sorting sorts negative to positive, so beware:
 				#sweep direction determines which part of array should be cut off
 				if sweepoverride: ##if sweep True, override the detect value
@@ -266,7 +266,7 @@ class plotR(object):
 					z = z[:xu*yu]
 					x = x[:xu*yu]
 					y = y[:xu*yu]
-
+				
 				XX = np.reshape(z,(xu,yu))
 
 				self.x = x
@@ -277,13 +277,15 @@ class plotR(object):
 				ylims = (y.min(),y.max())
 
 				#determine stepsize for di/dv, inprincipe only y step is used (ie. the diff is also taken in this direction and the measurement swept..)
-				xstep = (xlims[1] - xlims[0])/xu
-				ystep = (ylims[1] - ylims[0])/yu
+				xstep = float(xlims[1] - xlims[0])/xu
+				ystep = float(ylims[1] - ylims[0])/yu
+				
 				ext = xlims+ylims
 				self.extent = ext
 				self.XX = XX
 
 				self.exportData.append(XX)
+
 				try:
 					m={
 						'xu':xu,
@@ -296,7 +298,7 @@ class plotR(object):
 						'zname':'unused',
 						'datasetname':self.name}
 					self.exportDataMeta = np.append(self.exportDataMeta,m)
-				except Exception,e:
+				except Exception as e:
 					print(e)
 					pass
 				if ax_destination is None:
@@ -325,7 +327,6 @@ class plotR(object):
 					w[k] = w2[k]
 				w['massage_func']=massage_func
 				styles.processStyle(style, w)
-
 				#unwrap
 				ext = w['ext']
 				XX = w['XX']
@@ -355,7 +356,6 @@ class plotR(object):
 						self.im = ax.pcolormesh(xv,yv,np.rot90(np.fliplr(XX)),cmap=plt.get_cmap(self.ccmap))
 					if not clim:
 						self.im.set_clim(self.autoColorScale(XX.flatten()))
-
 				if 'flipaxes' in style:
 					ax.set_xlabel(coord_keys[-1])
 					ax.set_ylabel(coord_keys[-2])
@@ -401,11 +401,13 @@ class plotR(object):
 						else:
 							cbar.set_label(cbar_title)#,labelpad=-19, x=1.32)
 				cnt+=1 #counter for subplots
-
-		if self.fig and (mpl.get_backend() in ['Qt4Agg' , 'nbAgg']):
+		
+		
+		if self.fig and (mpl.get_backend() in [qtaggregator , 'nbAgg']):
 			self.toggleFiddle()
 			self.toggleLinedraw()
 			self.toggleLinecut()
+		
 		return self.fig
 
 	def plot2d(self,fiddle=False,

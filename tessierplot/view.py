@@ -1,7 +1,7 @@
 
 import matplotlib.pyplot as plt
-import plot as ts
-import data
+from . import plot as ts
+from . import data
 import jinja2 as jj
 import os
 from itertools import chain
@@ -50,7 +50,7 @@ class tessierView(object):
                 raise Exception('Couldn\'t create thumbnail directory')
         
     def on(self):   
-        print 'You are now watching through the glasses of ideology'
+        print('You are now watching through the glasses of ideology')
         display(VimeoVideo('106036638'))
           
     def getsetfilepath(self,filename):
@@ -58,7 +58,7 @@ class tessierView(object):
         if   file_Extension ==  '.gz':
             file_Path = os.path.splitext(file_Path)[0]
         elif file_Extension != '.dat':
-            print 'Wrong file extension'
+            print('Wrong file extension')
         setfilepath = file_Path + '.set'
         
         if not os.path.exists(setfilepath):
@@ -101,9 +101,9 @@ class tessierView(object):
                     else:                        
                         del p
     
-        except Exception,e:
+        except Exception as e:
             thumbfile = None #if fail no thumbfile was created
-            print 'Error {:s} for file {:s}'.format(e,filename)
+            print('Error {:s} for file {:s}'.format(str(e),filename))
             pass
 
         return thumbfile
@@ -162,7 +162,8 @@ class tessierView(object):
                         isinfilterstring = filterstring in open(setfilepath).read()
 
                 if isinfilterstring:   #liable for improvement
-                    print(fullpath)
+                    if self._showfilenames:
+                        print(fullpath)
                     df = data.Data.load_header_only(fullpath)
                     if headercheck is None or df.coordkeys[-2] == headercheck:
                         thumbpath = self.makethumbnail(fullpath,**kwargs)
@@ -415,7 +416,7 @@ class tessierView(object):
         """
         temp = jj.Template(out)
 
-        plotcommand = """\\nimport matplotlib.pyplot as plt\\nif not plt.get_fignums():\\n from tessierplot import plot as ts\\n reload(ts)\\np = ts.plotR(filename)\\np.quickplot(style= %s)\\n"""
+        plotcommand = """\\nimport matplotlib.pyplot as plt\\nimport imp\\nif not plt.get_fignums():\\n from tessierplot import plot as ts\\n imp.reload(ts)\\np = ts.plotR(filename)\\np.quickplot(style= %s)\\n"""
         
         import datetime
         d=datetime.datetime.utcnow()
