@@ -19,20 +19,22 @@ lives. Any editing done will immediately carry over.
 Make your life easier by making thumbnails of all measurement files
 and plot them in a nice grid.
 ```python
+import imp
 from tessierplot import view
+imp.reload(view)
 
-view.tessierView(rootdir='/where/my/naturepublicationmeasurements/are', filemask='.*.dat.gz$')
+view.tessierView(rootdir='/where/my/naturepublicationmeasurements/are',filterstring='',override=False, showfilenames=True)
 ```
 
-As can be seen tessierView takes 2 potential arguments. The rootdir is
-where view begins recursively looking for files matching the
-filemask. The filemask is expected to be a regular expression.
-
+As can be seen tessierView takes 4 potential arguments:
+- The rootdir is where view begins recursively looking for files matching the filterstring. 
+- The filterstring is expected to be a regular expression.
+- override determines if datafile preview files are replotted, even if they already exist. The default value is False.
+- showfilenames determines if the file name of every plotted data file is displayes. The default value is False
 
 ### plotR
 This is the main plotting object, it takes a measurement file as
-argument after
-which a specific command can be given to plot either 2d, 3d , or some
+argument, after which a specific command can be given to plot either 2d, 3d , or some
 other type of plot.
 
 ```python

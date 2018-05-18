@@ -3,7 +3,6 @@ from scipy import signal
 import re
 import collections
 import matplotlib.colors as mplc
-import matplotlib.pyplot as plt
 
 REGEX_STYLE_WITH_PARAMS = re.compile('(.+)\((.+)\)')
 REGEX_VARVALPAIR = re.compile('(\w+)=(.*)')
@@ -327,96 +326,97 @@ def getPopulatedWrap(style=[]):
 				i += 1
 		except Exception as e:
 			print('getPolulatedWrap(): Style {:s} does not exist ({:s})'.format(s, str(e)))
-			print e.__doc__
-			print e.args
+			print(e.__doc__)
+			print(e.args)
 			pass
 	return w
 
 def processStyle(style, wrap):
 	for s in style:
 		try:
-# 			print(s)
+			#print(s)
 			func = STYLE_FUNCS[s.split('(')[0]]
 			func(wrap)
+			#print(wrap)
 		except Exception as e:
 			print('processStyle(): Style {:s} does not exist ({:s})'.format(s, str(e)))
-			print e.__doc__
-			print e.args
+			print(e.__doc__)
+			print(e.args)
 			pass
 
 
 def moving_average_2d(data, window):
-    """Moving average on two-dimensional data.
-    """
-    # Makes sure that the window function is normalized.
-    window /= window.sum()
-    # Makes sure data array is a numpy array or masked array.
-    if type(data).__name__ not in ['ndarray', 'MaskedArray']:
-        data = np.asarray(data)
+	"""Moving average on two-dimensional data.
+	"""
+	# Makes sure that the window function is normalized.
+	window /= window.sum()
+	# Makes sure data array is a numpy array or masked array.
+	if type(data).__name__ not in ['ndarray', 'MaskedArray']:
+		data = np.asarray(data)
 
-    # The output array has the same dimensions as the input data
-    # (mode='same') and symmetrical boundary conditions are assumed
-    # (boundary='symm').
-    return signal.convolve2d(data, window, mode='same', boundary='symm')
+	# The output array has the same dimensions as the input data
+	# (mode='same') and symmetrical boundary conditions are assumed
+	# (boundary='symm').
+	return signal.convolve2d(data, window, mode='same', boundary='symm')
 
 def moving_average_1d(data, window):
-    """Moving average on two-dimensional data.
-    """
-    # Makes sure that the window function is normalized.
-    window /= window.sum()
-    # Makes sure data array is a numpy array or masked array.
-    if type(data).__name__ not in ['ndarray', 'MaskedArray']:
-        data = np.asarray(data)
+	"""Moving average on two-dimensional data.
+	"""
+	# Makes sure that the window function is normalized.
+	window /= window.sum()
+	# Makes sure data array is a numpy array or masked array.
+	if type(data).__name__ not in ['ndarray', 'MaskedArray']:
+		data = np.asarray(data)
 
-    # The output array has the same dimensions as the input data
-    # (mode='same') and symmetrical boundary conditions are assumed
-    # (boundary='symm').
-    return signal.convolve(data, window, mode='same')
+	# The output array has the same dimensions as the input data
+	# (mode='same') and symmetrical boundary conditions are assumed
+	# (boundary='symm').
+	return signal.convolve(data, window, mode='same')
 
 
 def get_offset(x,y1,y2):
 #     plt.figure(43)
 #     plt.plot(x,y1,x,y2)
-    corr = np.correlate(y1,y2,mode='same')
+	corr = np.correlate(y1,y2,mode='same')
 
-    #do a fit with a standard parabola for subpixel accuracy
-    import lmfit
-    from lmfit.models import ParabolicModel
-    mod = ParabolicModel()
+	#do a fit with a standard parabola for subpixel accuracy
+	import lmfit
+	from lmfit.models import ParabolicModel
+	mod = ParabolicModel()
 
-    def parabola(x,x0,a,b,c):
-        return a*np.power((x-x0),2)+b*(x-x0)+c
-    mod = lmfit.Model(parabola)
+	def parabola(x,x0,a,b,c):
+		return a*np.power((x-x0),2)+b*(x-x0)+c
+	mod = lmfit.Model(parabola)
 
-    _threshold = 0.7*max(corr)
-    xcorr=(np.linspace(0,len(corr),len(corr)))
-    xcorrfit=xcorr[corr >= _threshold]
-    ycorrfit=corr[corr >= _threshold]
+	_threshold = 0.7*max(corr)
+	xcorr=(np.linspace(0,len(corr),len(corr)))
+	xcorrfit=xcorr[corr >= _threshold]
+	ycorrfit=corr[corr >= _threshold]
 
-    
-    p=lmfit.Parameters()
-            #           (Name,  Value,  Vary,   Min,  Max,  Expr)
+	
+	p=lmfit.Parameters()
+			#           (Name,  Value,  Vary,   Min,  Max,  Expr)
 
-    p.add_many(        ('x0',      xcorrfit[ycorrfit==np.max(ycorrfit)][0],True,None,None,None),
-                        ('a',      -1,True,None,1,None),
-                       ('c',    1.,  True, None,None ,  None),
-                        ('b',0, False,  None,None,None)
-               )
-    result = mod.fit(ycorrfit,params=p,x=xcorrfit)
+	p.add_many(        ('x0',      xcorrfit[ycorrfit==np.max(ycorrfit)][0],True,None,None,None),
+						('a',      -1,True,None,1,None),
+					   ('c',    1.,  True, None,None ,  None),
+						('b',0, False,  None,None,None)
+			   )
+	result = mod.fit(ycorrfit,params=p,x=xcorrfit)
 #     print result.fit_report()
-    # todo:if result poorly conditioned throw it out and make offset 0
-    
-    
+	# todo:if result poorly conditioned throw it out and make offset 0
+	
+	
 #     plt.figure(44)
 #     plt.plot(corr,'o')
 #     plt.plot(xcorrfit,result.best_fit,'-')
 #     plt.plot(xcorrfit,result.init_fit,'-')
 
-    x0=result.best_values['x0']
-    span = max(x)-min(x)
-    #map back to real x values
-    xmap= np.linspace(
+	x0=result.best_values['x0']
+	span = max(x)-min(x)
+	#map back to real x values
+	xmap= np.linspace(
 				span/2, -span/2
 				,len(xcorr)) 
-    offset_intp = np.interp(x0,xcorr,xmap)
-    return offset_intp
+	offset_intp = np.interp(x0,xcorr,xmap)
+	return offset_intp

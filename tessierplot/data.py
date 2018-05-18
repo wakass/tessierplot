@@ -2,6 +2,7 @@ import pandas
 import os
 import re
 import numpy as np
+from six.moves import xrange
 
 class parser(object):
     def __init__(self):
@@ -22,7 +23,7 @@ class dat_parser(parser):
     def parse(self):
         filebuffer = self._filebuffer
         if filebuffer == None:
-            f = open(self._file)
+            f = open(self._file, mode='rb')
             self._filebuffer = f
         else:
             f = filebuffer
@@ -35,21 +36,23 @@ class dat_parser(parser):
                                  skiprows=self._headerlength,
                                  header=None,
                                  names=[i['name'] for i in self._header])
+        
         return super(dat_parser,self).parse()
 
     def is_valid(self):
         pass
     def parseheader(self):
         filebuffer = self._filebuffer
+        firstline = filebuffer.readline().decode()
 
-        firstline = filebuffer.readline()
         if not firstline: # for emtpy data files
             return None,-1
         if firstline[0] != '#': # for non-qtlab-like data files
             headerlength = 1
         else: # for qtlab-like data files featuring all kinds of information in python comment lines
             filebuffer.seek(0)
-            for i, line in enumerate(filebuffer):
+            for i, linebuffer in enumerate(filebuffer):
+                line = linebuffer.decode('utf-8')
                 if i < 3:
                     continue
                 if i > 5:
@@ -61,7 +64,9 @@ class dat_parser(parser):
 
         filebuffer.seek(0)
         headertext = [next(filebuffer) for x in xrange(headerlength)]
-        headertext= ''.join(headertext)
+        headertext= b''.join(headertext)
+        headertext= headertext.decode('utf-8')
+        
         filebuffer.seek(0) #put it back to 0 in case someone else naively reads the filebuffer
         #doregex
         coord_expression = re.compile(r"""                  ^\#\s*Column\s(.*?)\:
@@ -110,7 +115,7 @@ class dat_parser(parser):
             coord_short = [ zip(('column','name','size','type'),x) for x in coord_short]
             coord_short = [dict(x) for x in coord_short]
             header=coord_short+val
-
+        
         return header,headerlength
 
 class gz_parser(dat_parser):
@@ -119,7 +124,7 @@ class gz_parser(dat_parser):
         
         import gzip
         f = open(self._file,'rb')
-        if (f.read(2) == '\x1f\x8b'):
+        if (f.read(2) == b'\x1f\x8b'):
             f.seek(0)
             gz = super(gz_parser,self).__init__(filename=filename,filebuffer=gzip.GzipFile(fileobj=f))
             return gz
@@ -161,7 +166,7 @@ class Data(pandas.DataFrame):
     @classmethod
     def load_header_only(cls,filepath):
         parser = cls.determine_parser(filepath)
-        p = parser(filename=filepath,filebuffer=open(filepath))
+        p = parser(filename=filepath,filebuffer=open(filepath,mode='rb'))
         header,headerlength = p.parseheader()
         df = Data()
         df._header = header

@@ -1,11 +1,8 @@
-#tessierMagic, where the real % happens
-#tessierView for couch potato convenience...
 
-import plot as ts
-import data
-import jinja2 as jj
 import matplotlib.pyplot as plt
-import pylab
+from . import plot as ts
+from . import data
+import jinja2 as jj
 import os
 from itertools import chain
 import numpy as np
@@ -14,28 +11,9 @@ import win32api
 from IPython.display import VimeoVideo
 from IPython.display import display, HTML, display_html
 
-
-reload(ts)
-
-_plot_width = 4. # in inch (ffing inches eh)
-_plot_height = 3. # in inch
-
-_fontsize_plot_title = 10
-_fontsize_axis_labels = 10
-_fontsize_axis_tick_labels = 10
-
 plotstyle = 'normal'
 
-rcP = {  'figure.figsize': (_plot_width, _plot_height), #(width in inch, height in inch)
-        'axes.labelsize':  _fontsize_axis_labels,
-        'xtick.labelsize': _fontsize_axis_tick_labels,
-        'ytick.labelsize': _fontsize_axis_tick_labels,
-        'legend.fontsize': 5.
-        }
-        
-rcP_old = pylab.rcParams.copy()
-
-# pylab.rcParams['legend.linewidth'] = 10
+#pylab.rcParams['legend.linewidth'] = 10
 def getthumbcachepath(file):
     oneupdir = os.path.abspath(os.path.join(os.path.dirname(file),os.pardir))
     datedir = os.path.split(oneupdir)[1] #directory name should be datedir, if not 
@@ -51,28 +29,6 @@ def getthumbcachepath(file):
 def getthumbdatapath(file):
     thumbdatapath = os.path.splitext(file)[0] + '_thumb.png'
     return thumbdatapath
-
-
-def overridethumbnail(file, fig):
-##Todo, copy thumbs on the fly from their working directories, thus negating having to recheck..the..data..file?
-    #create a thumbnail and store it in the same directory and in the thumbnails dir for local file serving, override options for if file already exists
-    thumbfile = getthumbcachepath(file)
-    thumbfile_datadir =  getthumbdatapath(file)
-    try:
-        pylab.rcParams.update(rcP)
-        fig.savefig(thumbfile,bbox_inches='tight' )
-        fig.savefig(thumbfile_datadir,bbox_inches='tight' )
-        plt.close(fig)
-    except Exception,e:
-        thumbfile = None #if fail no thumbfile was created
-        print 'Error {:s} for file {:s}'.format(e,file)
-        pass
-        
-    #put back the old settings
-    pylab.rcParams = rcP_old
-
-    return thumbfile
-
 
 class tessierView(object):
     def __init__(self, rootdir='./', filemask='.*\.dat(?:\.gz)?$',filterstring='',override=False,headercheck=None,style=[],showfilenames=False):
@@ -94,36 +50,33 @@ class tessierView(object):
                 raise Exception('Couldn\'t create thumbnail directory')
         
     def on(self):   
-        print 'You are now watching through the glasses of ideology'
+        print('You are now watching through the glasses of ideology')
         display(VimeoVideo('106036638'))
           
-    def getsetfilepath(self,file):
-        file_Path, file_Extension = os.path.splitext(file)
+    def getsetfilepath(self,filename):
+        file_Path, file_Extension = os.path.splitext(filename)
         if   file_Extension ==  '.gz':
             file_Path = os.path.splitext(file_Path)[0]
         elif file_Extension != '.dat':
-            print 'Wrong file extension'
+            print('Wrong file extension')
         setfilepath = file_Path + '.set'
         
         if not os.path.exists(setfilepath):
             setfilepath = None
         
         return setfilepath
-    def makethumbnail(self, file,override=False,style=[]):
+    def makethumbnail(self, filename,override=False,style=[]):
         #create a thumbnail and store it in the same directory and in the thumbnails dir for local file serving, override options for if file already exists
-        thumbfile = getthumbcachepath(file)
+        thumbfile = getthumbcachepath(filename)
         
-        if self._showfilenames:
-            print file
+        thumbfile_datadir =  getthumbdatapath(filename)
         
-        thumbfile_datadir =  getthumbdatapath(file)
         try:
             if os.path.exists(thumbfile):
-                thumbnailStale = os.path.getmtime(thumbfile) < os.path.getmtime(file)   #check modified date with file modified date, if file is newer than thumbfile refresh the thumbnail
+                thumbnailStale = os.path.getmtime(thumbfile) < os.path.getmtime(filename)   #check modified date with file modified date, if file is newer than thumbfile refresh the thumbnail
             if ((not os.path.exists(thumbfile)) or override or thumbnailStale):
                 #now make thumbnail because it doesnt exist or if u need to refresh
-                pylab.rcParams.update(rcP)
-                p = ts.plotR(file)
+                p = ts.plotR(filename,isthumbnail=True,thumbs = [thumbfile,thumbfile_datadir])
 
                 if len(p.data) > 20: ##just make sure really unfinished measurements are thrown out
                     is2d = p.is2d()
@@ -132,22 +85,26 @@ class tessierView(object):
                         guessStyle = ['normal']
                     else :
                         guessStyle = p.guessStyle()
-
+                    
                     p.quickplot(style=guessStyle + style)
-
+					
                     p.fig.savefig(thumbfile,bbox_inches='tight' )
                     p.fig.savefig(thumbfile_datadir,bbox_inches='tight' )
                     plt.close(p.fig)
-                    
                 else:
                     thumbfile = None
-        except Exception,e:
+                while True: #destroy the plotR object
+                    try: 
+                        p
+                    except:
+                        break
+                    else:                        
+                        del p
+    
+        except Exception as e:
             thumbfile = None #if fail no thumbfile was created
-            print 'Error {:s} for file {:s}'.format(e,file)
+            print('Error {:s} for file {:s}'.format(str(e),filename))
             pass
-        finally:
-            #put back the old settings
-            pylab.rcParams.update(rcP_old)
 
         return thumbfile
 
@@ -167,6 +124,7 @@ class tessierView(object):
         images = 0
         self.allthumbs = []
         reg = re.compile(self._filemask) #get only files determined by filemask
+        
         for root,dirnames,filenames in chain.from_iterable(os.walk(path) for path in paths):
             dirnames.sort(reverse=True)
             matches = []
@@ -204,6 +162,8 @@ class tessierView(object):
                         isinfilterstring = filterstring in open(setfilepath).read()
 
                 if isinfilterstring:   #liable for improvement
+                    if self._showfilenames:
+                        print(fullpath)
                     df = data.Data.load_header_only(fullpath)
                     if headercheck is None or df.coordkeys[-2] == headercheck:
                         thumbpath = self.makethumbnail(fullpath,**kwargs)
@@ -214,14 +174,11 @@ class tessierView(object):
                                                  'datedir':datedir, 
                                                  'measname':measname})
                             images += 1
-
         return self._allthumbs
+
     def _ipython_display_(self):
         
         display_html(HTML(self.genhtml(refresh=False,style=self._style)))
-    
-    def htmlout(self,refresh=False):
-        display(HTML(self.genhtml(refresh=refresh)))
         
     def genhtml(self,refresh=False,**kwargs):
         if self._override:
@@ -234,7 +191,6 @@ class tessierView(object):
                             'datapath':k['datapath'], 
                             'datedir':k['datedir'], 
                             'measname':k['measname'] } for k in self._allthumbs]
-
         out=u"""
 
         
@@ -336,7 +292,7 @@ class tessierView(object):
                 history.replaceState(null,null,url);   //Don't like hashes. Changing it back.
             }
             function tovar(id) {
-                exec =' file \= \"' + id + '\"';
+                exec =' filename \= \"' + id + '\"';
                 pycommand(exec);
             }
             function toclipboard(id) {
@@ -375,7 +331,7 @@ class tessierView(object):
             function plot(id,x,y){
                 dir = id.split('/');
                 
-                exec = 'file \= \"' + id + '\"; {{ plotcommand }}';
+                exec = 'filename \= \"' + id + '\"; {{ plotcommand }}';
                 exec = exec.printf(x)
 
                 pycommand(exec);
@@ -460,7 +416,8 @@ class tessierView(object):
         """
         temp = jj.Template(out)
 
-        plotcommand = """from tessierplot import plot as ts; reload(ts); p = ts.plotR(file); p.quickplot(style= %s) """
+        plotcommand = """\\nimport matplotlib.pyplot as plt\\nimport imp\\nif not plt.get_fignums():\\n from tessierplot import plot as ts\\n imp.reload(ts)\\np = ts.plotR(filename)\\np.quickplot(style= %s)\\n"""
+        
         import datetime
         d=datetime.datetime.utcnow()
         nowstring = d.strftime('%Y%m%d%H%M%S')
