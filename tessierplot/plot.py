@@ -38,6 +38,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 from scipy.signal import argrelmax
 
+import numpy as np
 import math
 import re
 
