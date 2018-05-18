@@ -1,5 +1,5 @@
-#tessierplot
-##Installation
+# tessierplot
+## Installation
 
 Go into the project folder and type:
 ```
